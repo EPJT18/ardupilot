@@ -122,6 +122,7 @@ public:
         k_param_fbwa_tdrag_chan,
         k_param_rangefinder_landing,
         k_param_land_flap_percent,  // unused - moved to AP_Landing
+        k_param_precland = 74,
         k_param_takeoff_flap_percent,
         k_param_flap_slewrate,
         k_param_rtl_autoland,

@@ -37,6 +37,13 @@ void Plane::read_rangefinder(void)
     rangefinder_height_update();
 }
 
+// return true if rangefinder_alt can be used
+bool Plane::rangefinder_alt_ok()
+{
+    // todo: in_range may affect final stage of landing
+    return (rangefinder_state.in_use && rangefinder_state.in_range);
+}
+
 /*
   calibrate compass
 */

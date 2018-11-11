@@ -183,6 +183,60 @@ struct PACKED log_Sonar {
     float correction;
 };
 
+// precision landing logging
+struct PACKED log_Precland {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    uint8_t healthy;
+    uint8_t target_acquired;
+    float pos_x;
+    float pos_y;
+    float vel_x;
+    float vel_y;
+    float meas_x;
+    float meas_y;
+    float meas_z;
+    uint32_t last_meas;
+    uint32_t ekf_outcount;
+    uint8_t estimator;
+};
+
+// Write a precision landing entry
+void Plane::Log_Write_Precland()
+{
+ #if PRECISION_LANDING == ENABLED
+    // exit immediately if not enabled
+    if (!precland.enabled()) {
+        return;
+    }
+
+    Vector3f target_pos_meas = Vector3f(0.0f,0.0f,0.0f);
+    Vector2f target_pos_rel = Vector2f(0.0f,0.0f);
+    Vector2f target_vel_rel = Vector2f(0.0f,0.0f);
+    precland.get_target_position_relative_cm(target_pos_rel);
+    precland.get_target_velocity_relative_cms(target_vel_rel);
+    precland.get_target_position_measurement_cm(target_pos_meas);
+
+    struct log_Precland pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_PRECLAND_MSG),
+        time_us         : AP_HAL::micros64(),
+        healthy         : precland.healthy(),
+        target_acquired : precland.target_acquired(),
+        pos_x           : target_pos_rel.x,
+        pos_y           : target_pos_rel.y,
+        vel_x           : target_vel_rel.x,
+        vel_y           : target_vel_rel.y,
+        meas_x          : target_pos_meas.x,
+        meas_y          : target_pos_meas.y,
+        meas_z          : target_pos_meas.z,
+        last_meas       : precland.last_backend_los_meas_ms(),
+        ekf_outcount    : precland.ekf_outlier_count(),
+        estimator       : precland.estimator_type()
+    };
+    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+ #endif     // PRECISION_LANDING == ENABLED
+}
+
 // Write a sonar packet
 void Plane::Log_Write_Sonar()
 {
@@ -317,6 +371,10 @@ const struct LogStructure Plane::log_structure[] = {
     { LOG_OPTFLOW_MSG, sizeof(log_Optflow),
       "OF",   "QBffff",   "TimeUS,Qual,flowX,flowY,bodyX,bodyY", "s-EEEE", "F-0000" },
 #endif
+#if PRECISION_LANDING == ENABLED
+    { LOG_PRECLAND_MSG, sizeof(log_Precland),
+      "PL",    "QBBfffffffIIB",    "TimeUS,Heal,TAcq,pX,pY,vX,vY,mX,mY,mZ,LastMeasUS,EKFOutl,Est", "s--ddmmddms--","F--00BB00BC--" },
+#endif
     { LOG_PIQR_MSG, sizeof(log_PID), \
       "PIQR", PID_FMT,  PID_LABELS, PID_UNITS, PID_MULTS },  \
     { LOG_PIQP_MSG, sizeof(log_PID), \
@@ -357,6 +415,7 @@ void Plane::Log_Write_Control_Tuning() {}
 void Plane::Log_Write_Nav_Tuning() {}
 void Plane::Log_Write_Status() {}
 void Plane::Log_Write_Sonar() {}
+void Plane::Log_Write_Precland() {}
 
  #if OPTFLOW == ENABLED
 void Plane::Log_Write_Optflow() {}

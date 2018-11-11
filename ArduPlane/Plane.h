@@ -96,6 +96,8 @@
 #include <AP_ICEngine/AP_ICEngine.h>
 #include <AP_Gripper/AP_Gripper.h>
 #include <AP_Landing/AP_Landing.h>
+# include <AC_PrecLand/AC_PrecLand.h>
+# include <AP_IRLock/AP_IRLock.h>
 
 #include "GCS_Mavlink.h"
 #include "GCS_Plane.h"
@@ -277,6 +279,11 @@ private:
     // Camera
 #if CAMERA == ENABLED
     AP_Camera camera{&relay, MASK_LOG_CAMERA, current_loc, ahrs};
+#endif
+
+    // Precision Landing
+#if PRECISION_LANDING == ENABLED
+    AC_PrecLand precland;
 #endif
 
 #if OPTFLOW == ENABLED
@@ -803,6 +810,7 @@ private:
     void Log_Write_Vehicle_Startup_Messages();
     void Log_Write_AOA_SSA();
     void Log_Write_AETR();
+    void Log_Write_Precland();
 
     void load_parameters(void);
     void convert_mixers(void);
@@ -913,6 +921,7 @@ private:
     bool trim_radio();
     bool rc_failsafe_active(void);
     void read_rangefinder(void);
+    bool rangefinder_alt_ok();
     void read_airspeed(void);
     void rpm_update(void);
     void init_ardupilot();
@@ -1026,6 +1035,11 @@ private:
     void do_parachute(const AP_Mission::Mission_Command& cmd);
     void parachute_release();
     bool parachute_manual_release();
+#endif
+#if PRECISION_LANDING == ENABLED
+    // precision_landing.cpp
+    void init_precland();
+    void update_precland();
 #endif
 #if OSD_ENABLED == ENABLED
     void publish_osd_info();

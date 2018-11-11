@@ -1303,6 +1303,14 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 
+#if PRECISION_LANDING == ENABLED
+    case MAVLINK_MSG_ID_LANDING_TARGET:
+    {
+        plane.precland.handle_msg(msg);
+        break;
+    }
+#endif
+
 #if MOUNT == ENABLED
     //deprecated. Use MAV_CMD_DO_MOUNT_CONFIGURE
     case MAVLINK_MSG_ID_MOUNT_CONFIGURE:
