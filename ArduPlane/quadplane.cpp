@@ -2128,11 +2128,21 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
     
-    if (plane.g.vision_land_en && plane.visionland.ok()){
+    Location loc = cmd.content.location;
 
-    }else{
-        plane.set_next_WP(cmd.content.location);
-    }
+    // Vision land enabled and target visible/stable
+    if (plane.g.vision_land_en && plane.visionland.ok()){
+        
+        //inject target location
+        Location vis_loc = plane.g.visionland.get_target_location();
+
+        //override lat and long
+        loc.lat = vis_loc.lat;
+        loc.long = vis_loc.lng;
+    };
+    
+    plane.set_next_WP(loc);
+    
     
 
 

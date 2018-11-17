@@ -15,6 +15,8 @@ public:
     void handle_msg(mavlink_message_t* msg);
     int ok();
 
+    struct Location get_target_location();
+
 private:
     uint64_t    _timestamp_us;  // timestamp from message
     uint8_t     _frame;         // Frame of message
