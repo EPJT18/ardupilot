@@ -9,7 +9,7 @@ public:
     // Constructor
     AP_Vision_Land();
 
-    void update_vision_land();
+    // void update_vision_land();
 
     // process a LANDING_TARGET mavlink message
     void handle_msg(mavlink_message_t* msg);
@@ -18,8 +18,8 @@ public:
     struct Location get_target_location();
 
 private:
-    uint64_t    _timestamp_us;  // timestamp from message
-    uint8_t     _frame;         // Frame of message
-    float       _x, _y;         // Target location
-    uint8_t     _valid;         // Target position valid
+    uint64_t    timestamp_us;  // timestamp from message
+    uint8_t     frame;         // Frame of message
+    float       x, y;         // Target location
+    uint8_t     valid;         // Target position valid
 };

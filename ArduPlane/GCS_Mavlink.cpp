@@ -1082,8 +1082,7 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_long_packet(const mavlink_command_l
 
 #if VISION_LANDING == ENABLED
     case MAVLINK_MSG_ID_LANDING_TARGET:
-        
-        //copter.precland.handle_msg(msg);
+        plane.visionland.handle_msg();
         break;
 #endif
 
