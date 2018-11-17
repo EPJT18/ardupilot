@@ -2134,7 +2134,7 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     if (plane.g.vision_land_en && plane.visionland.ok()){
         
         //inject target location
-        Location vis_loc = plane.g.visionland.get_target_location();
+        Location vis_loc = plane.visionland.get_target_location();
 
         //override lat and long
         loc.lat = vis_loc.lat;
