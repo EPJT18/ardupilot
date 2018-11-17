@@ -146,6 +146,7 @@ public:
         k_param_crash_accel_threshold,
         k_param_override_safety,
         k_param_land_throttle_slewrate, // 104 unused - moved to AP_Landing
+	k_param_vision_land_en,
 
         // 105: Extra parameters
         k_param_fence_retalt = 105,

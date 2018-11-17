@@ -27,7 +27,7 @@ void update_vision_land(){
     this.handle_msg();
 }
 
-int vision_land_ok(){
+int ok(){
     return this._valid;
 }
 

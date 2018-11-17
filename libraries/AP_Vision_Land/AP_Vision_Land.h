@@ -13,10 +13,11 @@ public:
 
     // process a LANDING_TARGET mavlink message
     void handle_msg(mavlink_message_t* msg);
+    int ok();
 
 private:
     uint64_t    _timestamp_us;  // timestamp from message
     uint8_t     _frame;         // Frame of message
     float       _x, _y;         // Target location
     uint8_t     _valid;         // Target position valid
-}
+};

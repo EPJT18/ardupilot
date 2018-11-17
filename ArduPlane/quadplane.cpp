@@ -2128,7 +2128,7 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
     
-    if (g.vision_land_en && plane.vision_land_ok()){
+    if (plane.g.vision_land_en && plane.visionland.ok()){
 
     }else{
         plane.set_next_WP(cmd.content.location);
