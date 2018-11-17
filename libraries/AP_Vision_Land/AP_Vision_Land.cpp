@@ -27,14 +27,14 @@ void AP_Vision_Land::handle_msg(mavlink_message_t* msg)
 //     this.handle_msg();
 // }
 
-int ok(){
-    return this.valid;
+int AP_Vision_Land::ok(){
+    return this->valid;
 }
 
-//may need to add 'PACKED' (AP_Common.h, l 133)
-struct Location get_target_location(){
-    struct Location l;
-    l.lat = this.x
-    l.lng = this.y
+float AP_Vision_Land::get_target_lat(){
+    return this->x;
 }
 
+float AP_Vision_Land::get_target_lng(){
+    return this->y;
+}

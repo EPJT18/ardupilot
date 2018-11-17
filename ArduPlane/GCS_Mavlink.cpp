@@ -1080,13 +1080,7 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_long_packet(const mavlink_command_l
         return MAV_RESULT_FAILED;
 #endif
 
-#if VISION_LANDING == ENABLED
-    case MAVLINK_MSG_ID_LANDING_TARGET:
-        plane.visionland.handle_msg();
-        break;
-#endif
-
-    case MAV_CMD_DO_MOTOR_TEST:
+   case MAV_CMD_DO_MOTOR_TEST:
         // param1 : motor sequence number (a number from 1 to max number of motors on the vehicle)
         // param2 : throttle type (0=throttle percentage, 1=PWM, 2=pilot throttle channel pass-through. See MOTOR_TEST_THROTTLE_TYPE enum)
         // param3 : throttle (range depends upon param2)
@@ -1306,7 +1300,14 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 #endif // MOUNT == ENABLED
+    
+#if VISION_LANDING == ENABLED
+    case MAVLINK_MSG_ID_LANDING_TARGET:
+        plane.visionland.handle_msg(msg);
+        break;
+#endif
 
+ 
     case MAVLINK_MSG_ID_RADIO:
     case MAVLINK_MSG_ID_RADIO_STATUS:
     {

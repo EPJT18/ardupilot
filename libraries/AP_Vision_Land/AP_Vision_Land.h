@@ -6,16 +6,14 @@
 class AP_Vision_Land
 {
 public:
-    // Constructor
-    AP_Vision_Land();
-
     // void update_vision_land();
 
     // process a LANDING_TARGET mavlink message
     void handle_msg(mavlink_message_t* msg);
     int ok();
 
-    struct Location get_target_location();
+    float get_target_lat();
+    float get_target_lng();
 
 private:
     uint64_t    timestamp_us;  // timestamp from message
