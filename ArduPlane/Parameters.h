@@ -494,6 +494,7 @@ public:
 #endif
     AP_Int16 gcs_pid_mask;
     AP_Int8 parachute_channel;
+    AP_Int8 vision_land;
 };
 
 /*
