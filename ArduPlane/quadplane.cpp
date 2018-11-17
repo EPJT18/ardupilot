@@ -2128,7 +2128,14 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
     
-    plane.set_next_WP(cmd.content.location);
+    if (g.vision_land_en && plane.vision_land_ok()){
+
+    }else{
+        plane.set_next_WP(cmd.content.location);
+    }
+    
+
+
     // initially aim for current altitude
     plane.next_WP_loc.alt = plane.current_loc.alt;
     poscontrol.state = QPOS_POSITION1;

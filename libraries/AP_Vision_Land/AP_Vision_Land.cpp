@@ -11,12 +11,12 @@ void AP_Vision_Land::handle_msg(mavlink_message_t* msg)
 
     _timestamp_us = packet.time_usec;       // Unix time
 
-    _ref_frame = packet.frame;              // Frame of target pos reference
+    _frame = packet.frame;              // Frame of target pos reference
 
     // Position of the target in _ref_frame Frame
-    _pos_x = packet.x;
-    _pos_y = packet.y;
-    // _pos_z = packet.z; //shouldn't need alt
+    _x = packet.x;
+    _y = packet.y;
+    // _z = packet.z; //shouldn't need alt
 
     _valid = packet.position_valid;         // Is the position valid 0=False, 1=True
 
@@ -26,3 +26,15 @@ void update_vision_land(){
     // handle mavlink
     this.handle_msg();
 }
+
+int vision_land_ok(){
+    return this._valid;
+}
+
+//may need to add 'PACKED' (AP_Common.h, l 133)
+struct Location get_target_location(){
+    struct Location l;
+    l.lat = this.packet.x
+    l.lng = this.packet.y
+}
+

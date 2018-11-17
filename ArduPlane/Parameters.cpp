@@ -834,7 +834,7 @@ const AP_Param::Info Plane::var_info[] = {
     // @Description: Enable Precision landing
     // @Range: 0:Disabled,1:Enabled
     // @User: Standard
-    GSCALAR(vision_land, "VISION_LAND_EN", 0),
+    GSCALAR(vision_land_en, "VISION_LAND_EN", 0),
 #endif
 
 #if HIL_SUPPORT
