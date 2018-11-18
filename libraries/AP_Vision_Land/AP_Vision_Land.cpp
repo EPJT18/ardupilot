@@ -38,3 +38,10 @@ float AP_Vision_Land::get_target_lat(){
 float AP_Vision_Land::get_target_lng(){
     return this->y;
 }
+
+Location inject_updated_waypoint(Location next_loc){
+    Location new_loc = next_loc;
+    new_loc.lat = this.x;
+    new_loc.lng = this.y;
+    return new_loc;
+}

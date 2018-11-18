@@ -1846,6 +1846,11 @@ void QuadPlane::vtol_position_controller(void)
           for final land repositioning and descent we run the position controller
          */
 
+        // if precision land has better option, inject waypoint
+        if (plane.visionland.ok()){
+            loc = inject_updated_waypoint(plane.next_WP_loc)
+        }
+
         // also run fixed wing navigation
         plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
         FALLTHROUGH;
@@ -2131,13 +2136,16 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     Location loc = cmd.content.location;
 
     // Vision land enabled and target visible/stable
-    if (plane.g.vision_land_en && plane.visionland.ok()){
+    //deprec
+    // if (plane.g.vision_land_en && plane.visionland.ok()){
         
-        //inject target location
-        //override lat and long
-        loc.lat = plane.visionland.get_target_lat();
-        loc.lng = plane.visionland.get_target_lng();
-    };
+    //     //inject target location
+    //     Location vis_loc = plane.visionland.get_target_location();
+
+    //     //override lat and long
+    //     loc.lat = vis_loc.lat;
+    //     loc.lng = vis_loc.lng;
+    // };
     
     plane.set_next_WP(loc);
     
