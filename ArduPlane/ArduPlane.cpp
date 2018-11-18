@@ -99,9 +99,6 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
 #if OSD_ENABLED == ENABLED
     SCHED_TASK(publish_osd_info, 1, 10),
 #endif
-// #if VISION_LANDING == ENABLED
-//     SCHED_TASK(update_vision_land,      5,     50),
-// #endif
 };
 
 constexpr int8_t Plane::_failsafe_priorities[5];

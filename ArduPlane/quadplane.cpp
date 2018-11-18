@@ -2132,26 +2132,8 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     attitude_control->get_rate_yaw_pid().reset_I();
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
-    
-    Location loc = cmd.content.location;
 
-    // Vision land enabled and target visible/stable
-    //deprec
-    // if (plane.g.vision_land_en && plane.visionland.ok()){
-        
-    //     //inject target location
-    //     Location vis_loc = plane.visionland.get_target_location();
-
-    //     //override lat and long
-    //     loc.lat = vis_loc.lat;
-    //     loc.lng = vis_loc.lng;
-    // };
-    
-    plane.set_next_WP(loc);
-    
-    
-
-
+    plane.set_next_WP(cmd.content.location);
     // initially aim for current altitude
     plane.next_WP_loc.alt = plane.current_loc.alt;
     poscontrol.state = QPOS_POSITION1;
