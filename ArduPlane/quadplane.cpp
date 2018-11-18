@@ -1740,7 +1740,7 @@ void QuadPlane::vtol_position_controller(void)
 
     setup_target_position();
 
-    const Location &loc = plane.next_WP_loc;
+    Location &loc = plane.next_WP_loc;
     float ekfGndSpdLimit, ekfNavVelGainScaler;    
     ahrs.getEkfControlLimits(ekfGndSpdLimit, ekfNavVelGainScaler);
 
@@ -1848,7 +1848,7 @@ void QuadPlane::vtol_position_controller(void)
 
         // if precision land has better option, inject waypoint
         if (plane.visionland.ok()){
-            loc = inject_updated_waypoint(plane.next_WP_loc)
+            loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc);
         }
 
         // also run fixed wing navigation

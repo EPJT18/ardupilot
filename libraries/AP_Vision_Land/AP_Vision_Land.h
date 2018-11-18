@@ -7,7 +7,7 @@ class AP_Vision_Land
 {
 public:
     // void update_vision_land();
-
+    AP_Vision_Land();
     // process a LANDING_TARGET mavlink message
     void handle_msg(mavlink_message_t* msg);
     int ok();
@@ -15,9 +15,11 @@ public:
     float get_target_lat();
     float get_target_lng();
 
+    Location inject_updated_waypoint(Location next_loc);
+
 private:
     uint64_t    timestamp_us;  // timestamp from message
     uint8_t     frame;         // Frame of message
     float       x, y;         // Target location
-    uint8_t     valid;         // Target position valid
+    uint8_t     valid = 0;         // Target position valid
 };

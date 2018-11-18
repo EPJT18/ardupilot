@@ -1,6 +1,11 @@
 #include "AP_Vision_Land.h"
 
-
+AP_Vision_Land::AP_Vision_Land(){
+    // dummy data to test landing
+    this->x = -353630116;
+    this->y = 1491654995;
+    this->valid = 1;
+}
 
 // handle_msg - Process a LANDING_TARGET mavlink message
 void AP_Vision_Land::handle_msg(mavlink_message_t* msg)
@@ -39,9 +44,9 @@ float AP_Vision_Land::get_target_lng(){
     return this->y;
 }
 
-Location inject_updated_waypoint(Location next_loc){
+Location AP_Vision_Land::inject_updated_waypoint(Location next_loc){
     Location new_loc = next_loc;
-    new_loc.lat = this.x;
-    new_loc.lng = this.y;
+    new_loc.lat = this->x;
+    new_loc.lng = this->y;
     return new_loc;
 }
