@@ -1841,18 +1841,27 @@ void QuadPlane::vtol_position_controller(void)
     }
 
     case QPOS_POSITION2:
-    case QPOS_LAND_DESCEND:
-        /*
-          for final land repositioning and descent we run the position controller
-         */
-
+    case QPOS_VISION_LAND_ORIENT:
         // if precision land has better option, inject waypoint
-        if (plane.visionland.ok()){
-            loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc);
+        if (plane.g.vision_land_en){
+            if (plane.visionland.ok()){
+                loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc);
+                plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
+                if (plane.auto_state.wp_distance < 2){
+                    poscontrol.state = QPOS_LAND_DESCEND;
+                }
+            }else{
+                //search for target
+            }
+        }else{
+            poscontrol.state = QPOS_LAND_DESCEND;
         }
-
-        // also run fixed wing navigation
+        break;
+        
+    case QPOS_LAND_DESCEND:
+        
         plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
+        // also run fixed wing navigation       
         FALLTHROUGH;
 
     case QPOS_LAND_FINAL:
@@ -1913,6 +1922,8 @@ void QuadPlane::vtol_position_controller(void)
         }
         break;
     }
+
+    case QPOS_VISION_LAND_ORIENT:
 
     case QPOS_LAND_DESCEND: {
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
@@ -2222,7 +2233,7 @@ bool QuadPlane::verify_vtol_land(void)
     if (!available()) {
         return true;
     }
-    if (poscontrol.state == QPOS_POSITION2 &&
+    if ((poscontrol.state == QPOS_POSITION2 && !plane.g.vision_land_en) &&
         plane.auto_state.wp_distance < 2) {
         poscontrol.state = QPOS_LAND_DESCEND;
         gcs().send_text(MAV_SEVERITY_INFO,"Land descend started");

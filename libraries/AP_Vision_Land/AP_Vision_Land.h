@@ -11,15 +11,16 @@ public:
     // process a LANDING_TARGET mavlink message
     void handle_msg(mavlink_message_t* msg);
     int ok();
-
+    int waypoint_injected();
     float get_target_lat();
     float get_target_lng();
 
     Location inject_updated_waypoint(Location next_loc);
 
 private:
-    uint64_t    timestamp_us;  // timestamp from message
-    uint8_t     frame;         // Frame of message
-    float       x, y;         // Target location
-    uint8_t     valid = 0;         // Target position valid
+    uint64_t    timestamp_us;   // timestamp from message
+    uint8_t     frame;          // Frame of message
+    float       x, y;           // Target location
+    uint8_t     valid = 0;      // Target position valid
+    int         have_injected;  // tells if vision landing waypoint is being used
 };
