@@ -52,3 +52,5 @@ Location AP_Vision_Land::inject_updated_waypoint(Location next_loc){
 int AP_Vision_Land::waypoint_injected(){
     return this->have_injected;
 }
+
+//todo, write reset method. Probably run on takeoff or land completed

@@ -1845,14 +1845,37 @@ void QuadPlane::vtol_position_controller(void)
         // if precision land has better option, inject waypoint
         if (plane.g.vision_land_en){
             if (plane.visionland.ok()){
+
                 loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc);
+
                 plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
+                pos_control->set_desired_velocity_xy(100,100); //magic num, fix this
+
+                //update wp dist so old waypoint isn't used in the QPOS_LAND_DESCEND transition
+                plane.auto_state.wp_distance = get_distance(plane.current_loc, plane.next_WP_loc); // be sure that this doesn't have side-effects
+
+                // waypoint injected to ensure looking at updated wp
                 if (plane.auto_state.wp_distance < 2){
                     poscontrol.state = QPOS_LAND_DESCEND;
                 }
-            }else{
-                //search for target
+                
+                
             }
+            //search for target
+            pos_control->set_desired_velocity_xy(0.0f,0.0f);
+
+            // set position control target and update
+            pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
+            pos_control->update_xy_controller(ekfNavVelGainScaler);
+
+            // nav roll and pitch are controller by position controller
+            plane.nav_roll_cd = pos_control->get_roll();
+            plane.nav_pitch_cd = pos_control->get_pitch();
+
+            // call attitude controller
+            attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
+                                                                        plane.nav_pitch_cd,
+                                                                        get_pilot_input_yaw_rate_cds() + get_weathervane_yaw_rate_cds());
         }else{
             poscontrol.state = QPOS_LAND_DESCEND;
         }
