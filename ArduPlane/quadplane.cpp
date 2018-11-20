@@ -1861,6 +1861,12 @@ void QuadPlane::vtol_position_controller(void)
                 
                 
             }
+
+            if(plane.visionland.search_timeout()){
+                // carry on with programmed vtol wp
+                poscontrol.state = QPOS_LAND_DESCEND;
+            }
+
             //search for target
             pos_control->set_desired_velocity_xy(0.0f,0.0f);
 
@@ -2243,6 +2249,7 @@ void QuadPlane::check_land_complete(void)
     // change in altitude for last 4s. We are landed.
     plane.disarm_motors();
     poscontrol.state = QPOS_LAND_COMPLETE;
+    plane.visionland.init(); //reinitialise vision land for next time
     gcs().send_text(MAV_SEVERITY_INFO,"Land complete");
     // reload target airspeed which could have been modified by the mission
     plane.aparm.airspeed_cruise_cm.load();

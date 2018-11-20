@@ -1,7 +1,7 @@
 #include "AP_Vision_Land.h"
 
 AP_Vision_Land::AP_Vision_Land(){
-    this->valid = 0;
+    this->init();
 }
 
 // handle_msg - Process a LANDING_TARGET mavlink message
@@ -21,6 +21,10 @@ void AP_Vision_Land::handle_msg(mavlink_message_t* msg)
     // _z = packet.z; //shouldn't need alt
 
     this->valid = packet.position_valid;         // Is the position valid 0=False, 1=True
+
+    if(this->valid){
+        this->timeout_begin_ms = 0;
+    }
 
 }
 
@@ -53,4 +57,25 @@ int AP_Vision_Land::waypoint_injected(){
     return this->have_injected;
 }
 
+bool AP_Vision_Land::search_timeout(){
+    //if first time called, assign call time, return false
+    if (this->timeout_begin_ms == 0){
+        this->timeout_begin_ms = AP_HAL::millis();   // set search start time
+        return false;
+    }
+
+    if ((AP_HAL::millis() - this->timeout_begin_ms) > this->timeout_ms){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+void AP_Vision_Land::init(){
+    this->valid = 0;
+    this->timeout_begin_ms = 0;
+    this->timeout_ms = 5000; //5 sec timeout //TODO: add to params
+}
+
 //todo, write reset method. Probably run on takeoff or land completed
+//add abort code, redirect to init
