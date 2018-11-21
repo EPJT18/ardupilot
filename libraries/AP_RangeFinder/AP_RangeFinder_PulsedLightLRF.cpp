@@ -141,6 +141,14 @@ static const struct settings_table settings_v2[] = {
 };
 
 /*
+  register setup table for V3 Lidar
+ */
+static const struct settings_table settings_v3[] = {
+    { LL40LS_INTERVAL, 0x28 }, // 0x28 == 50Hz
+};
+
+
+/*
   initialise the sensor to required settings
  */
 bool AP_RangeFinder_PulsedLightLRF::init(void)
@@ -154,7 +162,7 @@ bool AP_RangeFinder_PulsedLightLRF::init(void)
     _dev->set_split_transfers(true);
 
     if (rftype == RangeFinder::RangeFinder_TYPE_PLI2CV3) {
-        v2_hardware = true;
+        v3_hardware = true;
     } else {
         // auto-detect v1 vs v2
         if (!(_dev->read_registers(LL40LS_HW_VERSION, &hw_version, 1) &&
@@ -175,6 +183,10 @@ bool AP_RangeFinder_PulsedLightLRF::init(void)
         table = settings_v2;
         num_settings = sizeof(settings_v2) / sizeof(settings_table);
         phase = PHASE_COLLECT;
+    } else if (v3_hardware) {
+        table = settings_v3;
+        num_settings = sizeof(settings_v3) / sizeof(settings_table);
+        phase = PHASE_MEASURE;    
     } else {
         table = settings_v1;
         num_settings = sizeof(settings_v1) / sizeof(settings_table);
