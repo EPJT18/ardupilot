@@ -776,6 +776,7 @@ private:
     #endif
 
     void update_vision_land(void);
+    void send_vision_land_en(mavlink_channel_t chan);
     
     void adjust_nav_pitch_throttle(void);
     void update_load_factor(void);
