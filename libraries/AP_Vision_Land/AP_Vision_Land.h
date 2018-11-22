@@ -6,10 +6,10 @@
 class AP_Vision_Land
 {
 public:
-    // void update_vision_land();
+    bool vision_land_run;               // run vision land
+
     AP_Vision_Land();
     void init();
-    // process a LANDING_TARGET mavlink message
     void handle_msg(mavlink_message_t* msg);
     int ok();
     int waypoint_injected();
