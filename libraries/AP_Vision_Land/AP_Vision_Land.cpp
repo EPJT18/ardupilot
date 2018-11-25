@@ -75,6 +75,7 @@ void AP_Vision_Land::init(){
     this->valid = 0;
     this->timeout_begin_ms = 0;
     this->timeout_ms = 5000; //5 sec timeout //TODO: add to params
+    this->active = 0;
 }
 
 //todo, write reset method. Probably run on takeoff or land completed

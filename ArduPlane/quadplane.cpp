@@ -1844,6 +1844,9 @@ void QuadPlane::vtol_position_controller(void)
     case QPOS_VISION_LAND_ORIENT:
         // if precision land has better option, inject waypoint
         if (plane.g.vision_land_en){
+            // Trigger pi to start kalman filter
+            plane.visionland.active = 1;
+            
             if (plane.visionland.ok()){
 
                 loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc);

@@ -6,7 +6,7 @@
 class AP_Vision_Land
 {
 public:
-    bool vision_land_run;               // run vision land
+    uint8_t     active;                 // vision landing system is active
 
     AP_Vision_Land();
     void init();
@@ -17,6 +17,7 @@ public:
     float get_target_lng();
     bool search_timeout();
     Location inject_updated_waypoint(Location next_loc);
+    void send_begin_request(mavlink_channel_t chan);
 
 private:
     uint64_t    timestamp_us;           // timestamp from message
@@ -26,4 +27,5 @@ private:
     int         have_injected;          // tells if vision landing waypoint is being used
     uint32_t    timeout_begin_ms;       // Unix time ms, search commenced
     uint32_t    timeout_ms;             // Timeout for searching for target, resume programmed wp
+    
 };

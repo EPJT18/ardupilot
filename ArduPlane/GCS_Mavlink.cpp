@@ -317,7 +317,7 @@ void Plane::send_wind(mavlink_channel_t chan)
     {
         mavlink_msg_begin_vision_landing_send(
             chan,
-            plane.visionland.vision_land_run);
+            plane.visionland.active);
     }
 #endif
 
