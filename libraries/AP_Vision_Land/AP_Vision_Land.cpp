@@ -1,4 +1,5 @@
 #include "AP_Vision_Land.h"
+#include <DataFlash/DataFlash.h>
 
 AP_Vision_Land::AP_Vision_Land(){
     this->init();
@@ -21,6 +22,12 @@ void AP_Vision_Land::handle_msg(mavlink_message_t* msg)
     // _z = packet.z; //shouldn't need alt
 
     this->valid = packet.position_valid;         // Is the position valid 0=False, 1=True
+
+    // Add to log
+    DataFlash_Class::instance()->Log_Write("VLND","Lat,Lng,Valid","ffB", 
+        (double)this->x,
+        (double)this->y,
+        this->valid);
 
     if(this->valid){
         this->timeout_begin_ms = 0;
@@ -77,6 +84,8 @@ void AP_Vision_Land::init(){
     this->timeout_ms = 5000; //5 sec timeout //TODO: add to params
     this->active = 0;
 }
+
+
 
 //todo, write reset method. Probably run on takeoff or land completed
 //add abort code, redirect to init
