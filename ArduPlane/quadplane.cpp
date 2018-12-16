@@ -1740,7 +1740,7 @@ void QuadPlane::vtol_position_controller(void)
 
     setup_target_position();
 
-    const Location &loc = plane.next_WP_loc;
+    Location &loc = plane.next_WP_loc;
     float ekfGndSpdLimit, ekfNavVelGainScaler;    
     ahrs.getEkfControlLimits(ekfGndSpdLimit, ekfNavVelGainScaler);
 
@@ -1841,6 +1841,43 @@ void QuadPlane::vtol_position_controller(void)
     }
 
     case QPOS_POSITION2:
+    case QPOS_VISION_LAND_ORIENT:
+        if (plane.g.vision_land_en & !plane.visionland.search_timeout()){ 
+            //TODO: trigger pi to start kf (.active)
+            if (plane.visionland.ok()){ 
+                
+                // regulate WP update rate to reduce erratic flight
+                if (plane.visionland.waypoint_injection_check()){
+
+
+
+
+
+                    /////////////////////////////////////////////
+
+                    // saw something about smoothing the pos controller, wp changes are a bit erratic
+                    // to this next
+                    ///////////////////////////////////////////////////
+
+
+
+
+                    loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc); 
+                    plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc); 
+                }
+
+                //update wp dist so old waypoint isn't used in the QPOS_LAND_DESCEND transition 
+                plane.auto_state.wp_distance = get_distance(plane.current_loc, plane.next_WP_loc); // be sure that this doesn't have side-effects   
+
+                Vector2f diff2d;
+                Location origin = inertial_nav.get_origin();
+                diff2d = location_diff(origin, loc);
+                poscontrol.target.x = diff2d.x * 100;   
+                poscontrol.target.y = diff2d.y * 100;
+                poscontrol.target.z = plane.next_WP_loc.alt - origin.alt;
+            }
+        }
+
     case QPOS_LAND_DESCEND:
         /*
           for final land repositioning and descent we run the position controller
@@ -1908,7 +1945,7 @@ void QuadPlane::vtol_position_controller(void)
         }
         break;
     }
-
+    case QPOS_VISION_LAND_ORIENT:
     case QPOS_LAND_DESCEND: {
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
         pos_control->set_alt_target_from_climb_rate(-landing_descent_rate_cms(height_above_ground),

@@ -1,7 +1,9 @@
 #include "AP_Vision_Land.h"
 #include <DataFlash/DataFlash.h>
 
-AP_Vision_Land::AP_Vision_Land(){
+AP_Vision_Land::AP_Vision_Land(const AP_AHRS_NavEKF& ahrs):
+    _ahrs(ahrs)
+{
     this->init();
 }
 
@@ -30,7 +32,7 @@ void AP_Vision_Land::handle_msg(mavlink_message_t* msg)
         this->valid);
 
     if(this->valid){
-        this->timeout_begin_ms = 0;
+        this->timeout_begin_ms = AP_HAL::millis();
     }
 
 }
@@ -52,6 +54,21 @@ float AP_Vision_Land::get_target_lng(){
     return this->y;
 }
 
+bool AP_Vision_Land::waypoint_injection_check(){
+
+    //weird error catching, initialises to zero..
+    if (this->last_wp_ms == 0){
+        this->last_wp_ms = AP_HAL::millis(); //reset timeout
+        return false;
+    }
+
+    if (this->last_wp_ms > this->wp_update_period){
+        this->last_wp_ms = AP_HAL::millis();
+        return true;
+    }
+    return false;
+}
+
 Location AP_Vision_Land::inject_updated_waypoint(Location next_loc){
     this->have_injected = 1;
     Location new_loc = next_loc;
@@ -60,14 +77,27 @@ Location AP_Vision_Land::inject_updated_waypoint(Location next_loc){
     return new_loc;
 }
 
+bool AP_Vision_Land::get_relative_cms(Vector2f& v){
+    Location pad_loc, tmp_loc;
+    pad_loc.lat = this->x;
+    pad_loc.lng = this->y;
+    if(!_ahrs.get_location(tmp_loc)){
+        return false;
+    }
+    v = location_diff(tmp_loc, pad_loc) * 100.0f;
+    return true;
+}
+
 int AP_Vision_Land::waypoint_injected(){
+    this->timeout_begin_ms = AP_HAL::millis(); //reset timeout
     return this->have_injected;
 }
 
 bool AP_Vision_Land::search_timeout(){
-    //if first time called, assign call time, return false
+
+    //weird error catching, initialises to zero..
     if (this->timeout_begin_ms == 0){
-        this->timeout_begin_ms = AP_HAL::millis();   // set search start time
+        this->timeout_begin_ms = AP_HAL::millis(); //reset timeout
         return false;
     }
 
@@ -80,9 +110,11 @@ bool AP_Vision_Land::search_timeout(){
 
 void AP_Vision_Land::init(){
     this->valid = 0;
-    this->timeout_begin_ms = 0;
+    this->timeout_begin_ms = AP_HAL::millis();
+    this->last_wp_ms = AP_HAL::millis();
     this->timeout_ms = 5000; //5 sec timeout //TODO: add to params
     this->active = 0;
+    this->wp_update_period = 2000; //TODO: add to params
 }
 
 

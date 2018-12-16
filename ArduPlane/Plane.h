@@ -772,7 +772,7 @@ private:
 
  // Precision Landing
     #if VISION_LANDING == ENABLED
-        AP_Vision_Land visionland;
+        AP_Vision_Land visionland{ahrs};
     #endif
 
     void update_vision_land(void);
