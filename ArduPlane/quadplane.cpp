@@ -1740,7 +1740,7 @@ void QuadPlane::vtol_position_controller(void)
 
     setup_target_position();
 
-    Location &loc = plane.next_WP_loc;
+    const Location &loc = plane.next_WP_loc;
     float ekfGndSpdLimit, ekfNavVelGainScaler;    
     ahrs.getEkfControlLimits(ekfGndSpdLimit, ekfNavVelGainScaler);
 
@@ -1841,53 +1841,13 @@ void QuadPlane::vtol_position_controller(void)
     }
 
     case QPOS_POSITION2:
-    case QPOS_VISION_LAND_ORIENT:
-        // if precision land has better option, inject waypoint
-
-        //TODO: check that this still works after I removed the hardcoded state change to DESCEND
-        if (plane.g.vision_land_en & !plane.visionland.search_timeout()){
-            // Trigger pi to start kalman filter
-            plane.visionland.active = 1;
-            
-            if (plane.visionland.ok()){
-
-                loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc);
-
-                plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
-                pos_control->set_desired_velocity_xy(100,100); //magic num, fix this
-
-                //update wp dist so old waypoint isn't used in the QPOS_LAND_DESCEND transition
-                plane.auto_state.wp_distance = get_distance(plane.current_loc, plane.next_WP_loc); // be sure that this doesn't have side-effects                
-                
-            }
-
-            if(plane.visionland.search_timeout()){
-                // carry on with programmed vtol wp
-                poscontrol.state = QPOS_LAND_DESCEND;
-            }
-
-            //search for target
-            pos_control->set_desired_velocity_xy(0.0f,0.0f);
-
-            // set position control target and update
-            pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
-            pos_control->update_xy_controller(ekfNavVelGainScaler);
-
-            // nav roll and pitch are controller by position controller
-            plane.nav_roll_cd = pos_control->get_roll();
-            plane.nav_pitch_cd = pos_control->get_pitch();
-
-            // call attitude controller
-            attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
-                                                                        plane.nav_pitch_cd,
-                                                                        get_pilot_input_yaw_rate_cds() + get_weathervane_yaw_rate_cds());
-        }
-        FALLTHROUGH;
-        
     case QPOS_LAND_DESCEND:
-        
+        /*
+          for final land repositioning and descent we run the position controller
+         */
+
+        // also run fixed wing navigation
         plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
-        // also run fixed wing navigation       
         FALLTHROUGH;
 
     case QPOS_LAND_FINAL:
@@ -1948,8 +1908,6 @@ void QuadPlane::vtol_position_controller(void)
         }
         break;
     }
-
-    case QPOS_VISION_LAND_ORIENT:
 
     case QPOS_LAND_DESCEND: {
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
@@ -2169,6 +2127,7 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     attitude_control->get_rate_yaw_pid().reset_I();
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
+    
     plane.set_next_WP(cmd.content.location);
     // initially aim for current altitude
     plane.next_WP_loc.alt = plane.current_loc.alt;
@@ -2246,7 +2205,6 @@ void QuadPlane::check_land_complete(void)
     // change in altitude for last 4s. We are landed.
     plane.disarm_motors();
     poscontrol.state = QPOS_LAND_COMPLETE;
-    plane.visionland.init(); //reinitialise vision land for next time
     gcs().send_text(MAV_SEVERITY_INFO,"Land complete");
     // reload target airspeed which could have been modified by the mission
     plane.aparm.airspeed_cruise_cm.load();
@@ -2260,7 +2218,7 @@ bool QuadPlane::verify_vtol_land(void)
     if (!available()) {
         return true;
     }
-    if ((poscontrol.state == QPOS_POSITION2 && (!plane.g.vision_land_en | plane.visionland.search_timeout())) &&
+    if (poscontrol.state == QPOS_POSITION2 &&
         plane.auto_state.wp_distance < 2) {
         poscontrol.state = QPOS_LAND_DESCEND;
         gcs().send_text(MAV_SEVERITY_INFO,"Land descend started");
