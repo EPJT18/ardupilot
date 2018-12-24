@@ -56,13 +56,7 @@ float AP_Vision_Land::get_target_lng(){
 
 bool AP_Vision_Land::waypoint_injection_check(){
 
-    //weird error catching, initialises to zero..
-    if (this->last_wp_ms == 0){
-        this->last_wp_ms = AP_HAL::millis(); //reset timeout
-        return false;
-    }
-
-    if (this->last_wp_ms > this->wp_update_period){
+    if (AP_HAL::millis()-this->last_wp_ms > this->wp_update_period){
         this->last_wp_ms = AP_HAL::millis();
         return true;
     }
@@ -94,12 +88,6 @@ int AP_Vision_Land::waypoint_injected(){
 }
 
 bool AP_Vision_Land::search_timeout(){
-
-    //weird error catching, initialises to zero..
-    if (this->timeout_begin_ms == 0){
-        this->timeout_begin_ms = AP_HAL::millis(); //reset timeout
-        return false;
-    }
 
     if ((AP_HAL::millis() - this->timeout_begin_ms) > this->timeout_ms){
         return true;

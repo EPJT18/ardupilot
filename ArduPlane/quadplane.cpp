@@ -1849,21 +1849,19 @@ void QuadPlane::vtol_position_controller(void)
                 // regulate WP update rate to reduce erratic flight
                 if (plane.visionland.waypoint_injection_check()){
 
+                    // TODO: limit accel doesnt work
+                    pos_control->init_xy_controller(true);
+                    pos_control->set_desired_accel_xy(1.0, 1.0); // make magic num a param
 
-
-
-
-                    /////////////////////////////////////////////
-
-                    // saw something about smoothing the pos controller, wp changes are a bit erratic
-                    // to this next
-                    ///////////////////////////////////////////////////
-
-
-
+                    /***************************
+                     * 
+                     * reset accel_xy somwhere!!!
+                     * 
+                     * **************************/
 
                     loc = plane.visionland.inject_updated_waypoint(plane.next_WP_loc); 
                     plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc); 
+                    
                 }
 
                 //update wp dist so old waypoint isn't used in the QPOS_LAND_DESCEND transition 
@@ -1908,6 +1906,7 @@ void QuadPlane::vtol_position_controller(void)
         break;
 
     case QPOS_LAND_COMPLETE:
+        if (plane.g.vision_land_en){plane.visionland.init();}
         // nothing to do
         break;
     }
@@ -1945,13 +1944,14 @@ void QuadPlane::vtol_position_controller(void)
         }
         break;
     }
-    case QPOS_VISION_LAND_ORIENT:
+    
     case QPOS_LAND_DESCEND: {
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
         pos_control->set_alt_target_from_climb_rate(-landing_descent_rate_cms(height_above_ground),
                                                     plane.G_Dt, true);
         break;
     }
+    case QPOS_VISION_LAND_ORIENT:
 
     case QPOS_LAND_FINAL:
         pos_control->set_alt_target_from_climb_rate(-land_speed_cms, plane.G_Dt, true);
