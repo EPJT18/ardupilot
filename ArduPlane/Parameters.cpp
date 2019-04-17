@@ -828,6 +828,15 @@ const AP_Param::Info Plane::var_info[] = {
     // @User: Standard
     GSCALAR(inverted_flight_ch,     "INVERTEDFLT_CH", 0),
 
+#if VISION_LANDING == ENABLED
+    // @Param: PRECISION_LANDING
+    // @DisplayName: Precision Landing
+    // @Description: Enable Precision landing
+    // @Range: 0:Disabled,1:Enabled
+    // @User: Standard
+    GSCALAR(vision_land_en, "VISION_LAND_EN", 0),
+#endif
+
 #if HIL_SUPPORT
     // @Param: HIL_MODE
     // @DisplayName: HIL mode enable

@@ -344,6 +344,7 @@ private:
     enum position_control_state {
         QPOS_POSITION1,
         QPOS_POSITION2,
+        QPOS_VISION_LAND_ORIENT,
         QPOS_LAND_DESCEND,
         QPOS_LAND_FINAL,
         QPOS_LAND_COMPLETE

@@ -311,6 +311,16 @@ void Plane::send_wind(mavlink_channel_t chan)
         wind.z);
 }
 
+#if VISION_LANDING == ENABLED
+
+    void NOINLINE Plane::send_vision_land_en(mavlink_channel_t chan)
+    {
+        mavlink_msg_begin_vision_landing_send(
+            chan,
+            plane.visionland.active);
+    }
+#endif
+
 /*
   send RPM packet
  */
@@ -487,6 +497,13 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         plane.send_rpm(chan);
         break;
 
+    case MSG_BEGIN_VISION_LANDING:
+#if VISION_LANDING == ENABLED
+        CHECK_PAYLOAD_SIZE(BEGIN_VISION_LANDING);
+        plane.send_vision_land_en(chan);
+#endif 
+        break;
+
     case MSG_ADSB_VEHICLE:
         CHECK_PAYLOAD_SIZE(ADSB_VEHICLE);
         plane.adsb.send_adsb_vehicle(chan);
@@ -660,6 +677,9 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_MAG_CAL_PROGRESS,
     MSG_EKF_STATUS_REPORT,
     MSG_VIBRATION,
+#if VISION_LANDING == ENABLE
+    MSG_BEGIN_VISION_LANDING,
+#endif
 };
 static const ap_message STREAM_ADSB_msgs[] = {
     MSG_ADSB_VEHICLE
@@ -1300,6 +1320,12 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 #endif // MOUNT == ENABLED
+    
+#if VISION_LANDING == ENABLED
+    case MAVLINK_MSG_ID_LANDING_TARGET:
+        plane.visionland.handle_msg(msg);
+        break;
+#endif
 
     case MAVLINK_MSG_ID_RADIO:
     case MAVLINK_MSG_ID_RADIO_STATUS:

@@ -129,7 +129,7 @@ public:
         k_param_stall_prevention,
         k_param_optflow,
         k_param_cli_enabled_old, // unused - CLI removed
-        k_param_trim_rc_at_start, // unused
+        k_param_vision_land_en,
         k_param_hil_mode,
         k_param_land_disarm_delay,  // unused - moved to AP_Landing
         k_param_glide_slope_threshold,
@@ -494,6 +494,7 @@ public:
 #endif
     AP_Int16 gcs_pid_mask;
     AP_Int8 parachute_channel;
+    AP_Int8 vision_land_en;
 };
 
 /*

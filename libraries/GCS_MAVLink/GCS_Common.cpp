@@ -2936,6 +2936,10 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
 
     switch(id) {
 
+    case MSG_BEGIN_VISION_LANDING:
+        CHECK_PAYLOAD_SIZE(BEGIN_VISION_LANDING);
+        break;
+
     case MSG_ATTITUDE:
         CHECK_PAYLOAD_SIZE(ATTITUDE);
         send_attitude();

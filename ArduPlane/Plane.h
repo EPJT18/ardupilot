@@ -97,6 +97,7 @@
 #include <AP_ICEngine/AP_ICEngine.h>
 #include <AP_Gripper/AP_Gripper.h>
 #include <AP_Landing/AP_Landing.h>
+#include <AP_Vision_Land/AP_Vision_Land.h>
 
 #include "GCS_Mavlink.h"
 #include "GCS_Plane.h"
@@ -768,6 +769,14 @@ private:
     // the crc of the last created PX4Mixer
     int32_t last_mixer_crc = -1;
 #endif // CONFIG_HAL_BOARD
+
+ // Precision Landing
+    #if VISION_LANDING == ENABLED
+        AP_Vision_Land visionland{ahrs};
+    #endif
+
+    void update_vision_land(void);
+    void send_vision_land_en(mavlink_channel_t chan);
     
     void adjust_nav_pitch_throttle(void);
     void update_load_factor(void);
