@@ -538,6 +538,19 @@ void GCS_MAVLINK_Copter::handle_command_ack(const mavlink_message_t &msg)
     GCS_MAVLINK::handle_command_ack(msg);
 }
 
+/*
+  handle a LANDING_TARGET command. The timestamp has been jitter corrected
+*/
+MAV_RESULT GCS_MAVLINK_Copter::handle_command_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms)
+{
+#if PRECISION_LANDING == ENABLED
+    copter.precland.handle_msg(packet, timestamp_ms);
+    return MAV_RESULT_ACCEPTED;
+#else
+    return MAV_RESULT_UNSUPPORTED;
+#endif
+}
+
 MAV_RESULT GCS_MAVLINK_Copter::_handle_command_preflight_calibration(const mavlink_command_long_t &packet)
 {
     if (is_equal(packet.param6,1.0f)) {
@@ -1189,12 +1202,6 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
         handle_radio_status(msg, copter.should_log(MASK_LOG_PM));
         break;
     }
-
-#if PRECISION_LANDING == ENABLED
-    case MAVLINK_MSG_ID_LANDING_TARGET:
-        copter.precland.handle_msg(msg);
-        break;
-#endif
 
     case MAVLINK_MSG_ID_TERRAIN_DATA:
     case MAVLINK_MSG_ID_TERRAIN_CHECK:
