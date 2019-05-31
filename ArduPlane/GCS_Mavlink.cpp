@@ -1149,6 +1149,12 @@ void GCS_MAVLINK_Plane::handleMessage(const mavlink_message_t &msg)
         break;
     }
 
+#if PRECISION_LANDING == ENABLED
+    case MAVLINK_MSG_ID_LANDING_TARGET:
+        plane.g2.precland.handle_msg(msg);
+        break;
+#endif
+
     case MAVLINK_MSG_ID_DISTANCE_SENSOR:
         plane.rangefinder.handle_msg(msg);
         break;

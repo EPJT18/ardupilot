@@ -1089,7 +1089,7 @@ const AP_Param::Info Plane::var_info[] = {
     // @Path: ../libraries/AP_OSD/AP_OSD.cpp
     GOBJECT(osd, "OSD", AP_OSD),
 #endif
-    
+
     AP_VAREND
 };
 
@@ -1234,6 +1234,12 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("DSPOILER_AILMTCH", 21, ParametersG2, crow_flap_aileron_matching, 100),
+
+#if PRECISION_LANDING == ENABLED
+    // @Group: PLND_
+    // @Path: ../libraries/AC_PrecLand/AC_PrecLand.cpp
+    AP_SUBGROUPINFO(precland, "PLND_", 22, ParametersG2, AC_PrecLand),
+#endif
 
     AP_GROUPEND
 };

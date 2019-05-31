@@ -112,6 +112,21 @@ void RC_Channel_Plane::do_aux_function(const aux_func_t ch_option, const aux_swi
 
     case AUX_FUNC::RTL:
         do_aux_function_change_mode(Mode::Number::RTL, ch_flag);
+
+    case AUX_FUNC::PRECISION_LOITER:
+#if PRECISION_LANDING == ENABLED
+        switch (ch_flag) {
+        case HIGH:
+            plane.quadplane.set_precision_loiter_enabled(true);
+            break;
+        case MIDDLE:
+            // nothing
+            break;
+        case LOW:
+            plane.quadplane.set_precision_loiter_enabled(false);
+            break;
+        }
+#endif
         break;
 
     default:
