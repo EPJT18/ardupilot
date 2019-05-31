@@ -260,9 +260,9 @@ private:
 
 #if PRECISION_LANDING == ENABLED
     bool _precision_loiter_enabled;
-    bool precland_active() const;
 #endif
-    
+    bool precland_active() const;
+
     AP_Int16 transition_time_ms;
 
     // transition deceleration, m/s/s

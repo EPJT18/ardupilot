@@ -677,6 +677,19 @@ void GCS_MAVLINK_Plane::handle_change_alt_request(AP_Mission::Mission_Command &c
     plane.reset_offset_altitude();
 }
 
+/*
+  handle a LANDING_TARGET command. The timestamp has been jitter corrected
+*/
+MAV_RESULT GCS_MAVLINK_Plane::handle_command_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms)
+{
+#if PRECISION_LANDING == ENABLED
+    plane.g2.precland.handle_msg(packet, timestamp_ms);
+    return MAV_RESULT_ACCEPTED;
+#else
+    return MAV_RESULT_UNSUPPORTED;
+#endif
+}
+
 
 MAV_RESULT GCS_MAVLINK_Plane::handle_command_preflight_calibration(const mavlink_command_long_t &packet)
 {
@@ -1148,12 +1161,6 @@ void GCS_MAVLINK_Plane::handleMessage(const mavlink_message_t &msg)
         handle_radio_status(msg, plane.should_log(MASK_LOG_PM));
         break;
     }
-
-#if PRECISION_LANDING == ENABLED
-    case MAVLINK_MSG_ID_LANDING_TARGET:
-        plane.g2.precland.handle_msg(msg);
-        break;
-#endif
 
     case MAVLINK_MSG_ID_DISTANCE_SENSOR:
         plane.rangefinder.handle_msg(msg);
