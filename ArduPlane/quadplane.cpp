@@ -1184,7 +1184,13 @@ float QuadPlane::landing_descent_rate_cms(float height_above_ground) const
 // return true if precision landing is active
 bool QuadPlane::precland_active(void) const
 {
-    if (plane.control_mode != &plane.mode_qland && !in_vtol_land_descent()) {
+    if (plane.control_mode != &plane.mode_qland &&
+        plane.control_mode != &plane.mode_qloiter &&
+        !in_vtol_land_descent()) {
+        return false;
+    }
+    if (plane.control_mode == &plane.mode_qloiter &&
+        !_precision_loiter_enabled) {
         return false;
     }
     AC_PrecLand &precland = plane.g2.precland;

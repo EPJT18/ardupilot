@@ -74,6 +74,10 @@ void RC_Channel_Plane::init_aux_function(const RC_Channel::aux_func_t ch_option,
         // want to startup with reverse thrust
         break;
 
+    case AUX_FUNC::PRECISION_LOITER:
+        do_aux_function(ch_option, ch_flag);
+        break;
+
     default:
         // handle in parent class
         RC_Channel::init_aux_function(ch_option, ch_flag);
