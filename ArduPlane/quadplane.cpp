@@ -122,6 +122,14 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("LAND_FINAL_ALT", 27, QuadPlane, land_final_alt, 6),
 
+    // @Param: MAX_DESCEND_TRIG_VEL
+    // @DisplayName: Maximum landing transition velocity
+    // @Description: Maximum velocity that will allow a descent to start
+    // @Units: cm/s
+    // @Range: 0 30000
+    // @User: Advanced
+    AP_GROUPINFO("TRAN_TRG_VEL", 28, QuadPlane, max_descend_trig_vel, 100),
+
     // 28 was used by THR_MID
 
     // @Param: TRAN_PIT_MAX
@@ -2146,8 +2154,9 @@ void QuadPlane::vtol_position_controller(void)
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
                                                                              plane.nav_pitch_cd,
                                                                              desired_auto_yaw_rate_cds() + get_weathervane_yaw_rate_cds());
-        if (plane.auto_state.wp_proportion >= 1 ||
-            plane.auto_state.wp_distance < 5) {
+        if ((plane.auto_state.wp_proportion >= 1 ||
+            plane.auto_state.wp_distance < 5) &&
+            plane.ahrs.groundspeed_vector().length() < max_descend_trig_vel*0.01) {
             poscontrol.state = QPOS_POSITION2;
             loiter_nav->clear_pilot_desired_acceleration();
             loiter_nav->init_target();
