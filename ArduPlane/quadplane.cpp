@@ -2112,6 +2112,16 @@ void QuadPlane::vtol_position_controller(void)
             // and the transition deceleration target
             poscontrol.stopping_distance = groundspeed.length_squared()/(2*transition_decel);
             poscontrol.pre_decel_gndspd = groundspeed.length();
+            
+            float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
+            if (!plane.have_reverse_thrust()) {
+                vel_forward.integrator = constrain_int16(throttle, 0, 100);
+            }
+            else{
+               vel_forward.integrator = constrain_int16(throttle, -100, 100);  
+            }
+            
+            vel_forward.last_ms = AP_HAL::millis();
         }
 
         // run fixed wing navigation
@@ -2124,6 +2134,10 @@ void QuadPlane::vtol_position_controller(void)
         if (poscontrol.stopping_distance > distance){
             target_speed = safe_sqrt(2*transition_decel*distance);
             target_speed_xy = diff_wp.normalized() * target_speed;
+            if(!poscontrol.stated_decel_profile){
+                vel_forward.integrator = 0;
+                poscontrol.stated_decel_profile = true;
+            }
         }
 
         if (distance < 1) {
@@ -2520,6 +2534,7 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     plane.next_WP_loc.alt = plane.current_loc.alt;
     poscontrol.state = QPOS_POSITION1;
     poscontrol.stopping_distance = 0;
+    poscontrol.stated_decel_profile =false;
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
     pos_control->init_xy_controller();
 

@@ -401,6 +401,7 @@ private:
         Vector2f target_velocity;
         Vector3f target;
         bool slow_descent:1;
+        bool stated_decel_profile:1;
     } poscontrol;
 
     struct {
