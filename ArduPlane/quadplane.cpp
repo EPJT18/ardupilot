@@ -1264,9 +1264,9 @@ float QuadPlane::get_pilot_input_yaw_rate_cds(void) const
 
 float QuadPlane::get_yaw_wait_yaw_rate_cds(void)
 {
-    if(abs(vtol_takeoff_yaw_error)<4500) {
-        return linear_interpolate(-yaw_rate_max*100,yaw_rate_max*100,vtol_takeoff_yaw_error,-4500,4500);
-    }
+    //if(abs(vtol_takeoff_yaw_error)<4500) {
+    //    return linear_interpolate(-yaw_rate_max*100,yaw_rate_max*100,vtol_takeoff_yaw_error,-4500,4500);
+    //}
     if(vtol_takeoff_yaw_error>0){
        
         return yaw_rate_max * 100;
