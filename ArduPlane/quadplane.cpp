@@ -1420,6 +1420,8 @@ bool QuadPlane::assistance_needed(float aspeed)
         gcs().send_text(MAV_SEVERITY_INFO, "Angle assist r=%d p=%d",
                                          (int)(ahrs.roll_sensor/100),
                                          (int)(ahrs.pitch_sensor/100));
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Q_Catch Initiated");
+        plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
     }
     return ret;
 }
