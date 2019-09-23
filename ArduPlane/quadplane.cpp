@@ -2101,12 +2101,13 @@ void QuadPlane::vtol_position_controller(void)
     case QPOS_POSITION1: {
         const Vector2f diff_wp = plane.current_loc.get_distance_NE(loc);
         const float distance = diff_wp.length();
-
+        Vector2f groundspeed = ahrs.groundspeed_vector();
+        float speed_towards_target = distance>1?(diff_wp.normalized()*groundspeed):0;
         // Initialise position control to target zero velocity
         // above the waypoint.
         if (poscontrol.stopping_distance <= 0) {
             
-            Vector2f groundspeed = ahrs.groundspeed_vector();
+            
 
             // Calculate stopping distance based on the current groundspeed
             // and the transition deceleration target
