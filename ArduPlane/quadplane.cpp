@@ -1404,7 +1404,7 @@ bool QuadPlane::assistance_needed(float aspeed)
     /*
       now check if we should provide assistance due to attitude error
      */
-
+    /*
     const uint16_t allowed_envelope_error_cd = 500U;
     if (labs(ahrs.roll_sensor) <= plane.aparm.roll_limit_cd+allowed_envelope_error_cd &&
         ahrs.pitch_sensor < plane.aparm.pitch_limit_max_cd+allowed_envelope_error_cd &&
@@ -1414,6 +1414,7 @@ bool QuadPlane::assistance_needed(float aspeed)
         angle_error_start_ms = 0;
         return false;
     }
+    */
     
     int32_t max_angle_cd = 100U*assist_angle;
     if ((labs(ahrs.roll_sensor - plane.nav_roll_cd) < max_angle_cd &&
@@ -1427,12 +1428,14 @@ bool QuadPlane::assistance_needed(float aspeed)
     if (angle_error_start_ms == 0) {
         angle_error_start_ms = now;
     }
-    bool ret = (now - angle_error_start_ms) >= 1000U;
+    bool ret = (now - angle_error_start_ms) >= 1000;
     if (ret && !in_angle_assist) {
         in_angle_assist = true;
         gcs().send_text(MAV_SEVERITY_INFO, "Angle assist r=%d p=%d",
                                          (int)(ahrs.roll_sensor/100),
                                          (int)(ahrs.pitch_sensor/100));
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Q_Catch Initiated");
+        plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
     }
     return ret;
 }
