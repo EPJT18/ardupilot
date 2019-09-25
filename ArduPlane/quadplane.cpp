@@ -141,13 +141,7 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("TRAN_PIT_MAX", 29, QuadPlane, transition_pitch_max, 3),
 
-    AP_GROUPINFO("BL_HOVER_MOTOR_MASK", 30, QuadPlane, bl_hover_motor_mask, 0),
 
-    AP_GROUPINFO("BL_FWD_MOTOR_MASK", 31, QuadPlane, bl_fwd_motor_mask, 0),
-
-    AP_GROUPINFO("BL_LOWEST_RPM", 32, QuadPlane, bl_lowest_rpm, 100),
-
-    AP_GROUPINFO("BL_LOWEST_RPM", 33, QuadPlane, bl_startup_time, 2000),
 
     
 
@@ -478,6 +472,16 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("TKOFF_ARSP_LIM", 15, QuadPlane, maximum_takeoff_airspeed, 0),
+
+    AP_GROUPINFO("BL_H_M_MASK", 16, QuadPlane, bl_hover_motor_mask, 0),
+
+    AP_GROUPINFO("BL_F_M_MASK", 17, QuadPlane, bl_fwd_motor_mask, 0),
+
+    AP_GROUPINFO("BL_LOW_RPM", 18, QuadPlane, bl_lowest_rpm, 100),
+
+    AP_GROUPINFO("BL_STRT_TIME", 19, QuadPlane, bl_startup_time, 2000),
+
+    AP_GROUPINFO("BL_FAIL_TIME", 20, QuadPlane, bl_fail_time, 2000),
 
     AP_GROUPEND
 };
@@ -2724,12 +2728,16 @@ bool QuadPlane::check_land_final(void)
 bool QuadPlane::check_hover_motors_spinning(void){
 
 #ifdef HAVE_AP_BLHELI_SUPPORT
+   
     uint32_t now = AP_HAL::millis();
     if(now-last_hover_motor_check_time>2000){
         first_hover_motor_check_time = now;     
     }
     last_hover_motor_check_time =now;
     if(now-first_hover_motor_check_time<bl_startup_time){
+        for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+            bl_last_spinning_packet[i]=now;
+        }
         return true;
     }
 
@@ -2738,38 +2746,37 @@ bool QuadPlane::check_hover_motors_spinning(void){
     if (!blheli) {
         return true;
     }
-
-    uint16_t hover_motors_rpms[AP_BLHELI_MAX_ESCS];
     
-    
+   
 
     
     for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
-        hover_motors_rpms[i]=0;
+              
         AP_BLHeli::telem_data td;
-        if (!blheli->get_telem_data(i, td)||!(((uint8_t)bl_hover_motor_mask) & (1U<<i))) {
+        
+        if (!(((uint8_t)bl_hover_motor_mask) & (1U<<i))) {
             continue;
-        }
-
-        hover_motors_rpms[i]=td.rpm;
-        if (td.rpm<bl_lowest_rpm){
-            gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor %d failed to start!", i+1);
-            return false;
             
         }
+        else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
+           
+            if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
+               
+                if (now-time_since_last_blh_warning>4000){
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor %d not running!", i+1);
+                    time_since_last_blh_warning = now;
+                }
+                return false;
+            }
+            
+        }
+        else{
+            bl_last_spinning_packet[i]=now;
+        }
+
+      
         
     }
-
-    AP::logger().Write("BLED","M1,M2,M3,M4,M5,M6,M7,M8","IIIIIIII",
-        hover_motors_rpms[0],
-        hover_motors_rpms[1],
-        hover_motors_rpms[2],
-        hover_motors_rpms[3],
-        hover_motors_rpms[4],
-        hover_motors_rpms[5],
-        hover_motors_rpms[6],
-        hover_motors_rpms[7]
-    );
 
     
 
@@ -2789,8 +2796,8 @@ bool QuadPlane::verify_vtol_land(void)
     if (!available()) {
         return true;
     }
-    if (!check_hover_motors_spinning()){
-        
+    if (!check_hover_motors_spinning()&&in_vtol_land_approach()){
+        plane.set_mode(plane.mode_loiter, MODE_REASON_VTOL_FAILED_TRANSITION);
     }
     if (poscontrol.state == QPOS_POSITION2 &&
         plane.auto_state.wp_distance < 2) {

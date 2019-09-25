@@ -303,8 +303,11 @@ private:
     AP_Int8 bl_fwd_motor_mask;
     AP_Int16 bl_lowest_rpm;
     AP_Int16 bl_startup_time;
+    AP_Int16 bl_fail_time;
+    AP_Int32 bl_last_spinning_packet[8];
     AP_Int32 last_hover_motor_check_time;
     AP_Int32 first_hover_motor_check_time;
+    AP_Int32 time_since_last_blh_warning;
 
     // control if a VTOL RTL will be used
     AP_Int8 rtl_mode;
