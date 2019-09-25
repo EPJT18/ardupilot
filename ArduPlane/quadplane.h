@@ -87,6 +87,7 @@ public:
     bool do_vtol_land(const AP_Mission::Mission_Command& cmd);
     bool verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd);
     bool verify_vtol_land(void);
+    bool check_hover_motors_spinning(void);
     bool in_vtol_auto(void) const;
     bool in_vtol_mode(void) const;
     void update_throttle_hover();
@@ -298,6 +299,12 @@ private:
     AP_Int8 enable;
     AP_Int8 transition_pitch_max;
     AP_Int16 max_descend_trig_vel;
+    AP_Int8 bl_hover_motor_mask;
+    AP_Int8 bl_fwd_motor_mask;
+    AP_Int16 bl_lowest_rpm;
+    AP_Int16 bl_startup_time;
+    AP_Int32 last_hover_motor_check_time;
+    AP_Int32 first_hover_motor_check_time;
 
     // control if a VTOL RTL will be used
     AP_Int8 rtl_mode;

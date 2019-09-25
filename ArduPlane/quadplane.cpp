@@ -141,6 +141,16 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("TRAN_PIT_MAX", 29, QuadPlane, transition_pitch_max, 3),
 
+    AP_GROUPINFO("BL_HOVER_MOTOR_MASK", 30, QuadPlane, bl_hover_motor_mask, 0),
+
+    AP_GROUPINFO("BL_FWD_MOTOR_MASK", 31, QuadPlane, bl_fwd_motor_mask, 0),
+
+    AP_GROUPINFO("BL_LOWEST_RPM", 32, QuadPlane, bl_lowest_rpm, 100),
+
+    AP_GROUPINFO("BL_LOWEST_RPM", 33, QuadPlane, bl_startup_time, 2000),
+
+    
+
     // frame class was moved from 30 when consolidating AP_Motors classes
 #define FRAME_CLASS_OLD_IDX 30
     // @Param: FRAME_CLASS
@@ -2710,13 +2720,77 @@ bool QuadPlane::check_land_final(void)
     return land_detector(6000);
 }
 
+
+bool QuadPlane::check_hover_motors_spinning(void){
+
+#ifdef HAVE_AP_BLHELI_SUPPORT
+    uint32_t now = AP_HAL::millis();
+    if(now-last_hover_motor_check_time>2000){
+        first_hover_motor_check_time = now;     
+    }
+    last_hover_motor_check_time =now;
+    if(now-first_hover_motor_check_time<bl_startup_time){
+        return true;
+    }
+
+
+         AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+    if (!blheli) {
+        return true;
+    }
+
+    uint16_t hover_motors_rpms[AP_BLHELI_MAX_ESCS];
+    
+    
+
+    
+    for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+        hover_motors_rpms[i]=0;
+        AP_BLHeli::telem_data td;
+        if (!blheli->get_telem_data(i, td)||!(((uint8_t)bl_hover_motor_mask) & (1U<<i))) {
+            continue;
+        }
+
+        hover_motors_rpms[i]=td.rpm;
+        if (td.rpm<bl_lowest_rpm){
+            gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor %d failed to start!", i+1);
+            return false;
+            
+        }
+        
+    }
+
+    AP::logger().Write("BLED","M1,M2,M3,M4,M5,M6,M7,M8","IIIIIIII",
+        hover_motors_rpms[0],
+        hover_motors_rpms[1],
+        hover_motors_rpms[2],
+        hover_motors_rpms[3],
+        hover_motors_rpms[4],
+        hover_motors_rpms[5],
+        hover_motors_rpms[6],
+        hover_motors_rpms[7]
+    );
+
+    
+
+   
+#endif
+
+return true;
+  
+}
+
 /*
   check if a VTOL landing has completed
  */
+
 bool QuadPlane::verify_vtol_land(void)
 {
     if (!available()) {
         return true;
+    }
+    if (!check_hover_motors_spinning()){
+        
     }
     if (poscontrol.state == QPOS_POSITION2 &&
         plane.auto_state.wp_distance < 2) {
@@ -3101,9 +3175,11 @@ float QuadPlane::stopping_distance(void)
 
 void QuadPlane::update_throttle_thr_mix(void)
 {
+
     // transition will directly manage the mix
     if (in_transition()) {
-      return;
+        check_hover_motors_spinning();
+        return;
     }
 
     // if disarmed or landed prioritise throttle
@@ -3112,6 +3188,8 @@ void QuadPlane::update_throttle_thr_mix(void)
         return;
     }
 
+
+    check_hover_motors_spinning();
     if (plane.control_mode == &plane.mode_qstabilize) {
         // manual throttle
         if (plane.get_throttle_input() <= 0) {
