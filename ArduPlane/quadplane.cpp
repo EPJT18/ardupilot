@@ -483,6 +483,8 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("BL_FAIL_TIME", 20, QuadPlane, bl_fail_time, 2000),
 
+    AP_GROUPINFO("SWOOP_OPTION", 21, QuadPlane, swoop_options, 0),
+
     AP_GROUPEND
 };
 
@@ -1685,6 +1687,10 @@ void QuadPlane::update(void)
     if (!setup()) {
         return;
     }
+    
+    check_hover_motors_spinning();
+    check_forward_motors_spinning();
+
 
     if ((ahrs_view != NULL) && !is_equal(_last_ahrs_trim_pitch, ahrs_trim_pitch.get())) {
         _last_ahrs_trim_pitch = ahrs_trim_pitch.get();
@@ -2725,6 +2731,73 @@ bool QuadPlane::check_land_final(void)
 }
 
 
+uint8_t QuadPlane::check_forward_motors_spinning(void){
+
+if(plane.throttle_percentage()<1){
+    first_forward_motor_check_time =0;
+}
+
+#ifdef HAVE_AP_BLHELI_SUPPORT
+   
+    uint8_t failed_motors=0;
+    uint32_t now = AP_HAL::millis();
+    
+    if(now-first_forward_motor_check_time<bl_startup_time){
+        for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+            if ((((uint8_t)bl_forward_motor_mask) & (1U<<i))) {
+                bl_last_spinning_packet[i]=now;
+            }
+        }
+        return 0;
+    }
+
+
+         AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+    if (!blheli) {
+        return 0;
+    }
+    
+   
+
+    
+    for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+              
+        AP_BLHeli::telem_data td;
+        
+        if (!(((uint8_t)bl_forward_motor_mask) & (1U<<i))) {
+            continue;
+            
+        }
+        else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
+           
+            if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
+               
+                if (now-time_since_last_forward_blh_warning>4000){
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Forward Motor %d not running!", i+1);
+                    time_since_last_forward_blh_warning = now;
+                }
+                failed_motors++;
+            }
+            
+        }
+        else{
+            bl_last_spinning_packet[i]=now;
+        }
+
+      
+        
+    }
+
+    return failed_motors
+
+   
+#endif
+
+return 0;
+  
+}
+
+//////
 bool QuadPlane::check_hover_motors_spinning(void){
 
 #ifdef HAVE_AP_BLHELI_SUPPORT
@@ -2736,7 +2809,9 @@ bool QuadPlane::check_hover_motors_spinning(void){
     last_hover_motor_check_time =now;
     if(now-first_hover_motor_check_time<bl_startup_time){
         for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
-            bl_last_spinning_packet[i]=now;
+            if ((((uint8_t)bl_hover_motor_mask) & (1U<<i))) {
+                bl_last_spinning_packet[i]=now;
+            }
         }
         return true;
     }
@@ -3185,7 +3260,7 @@ void QuadPlane::update_throttle_thr_mix(void)
 
     // transition will directly manage the mix
     if (in_transition()) {
-        check_hover_motors_spinning();
+        
         return;
     }
 
@@ -3196,7 +3271,6 @@ void QuadPlane::update_throttle_thr_mix(void)
     }
 
 
-    check_hover_motors_spinning();
     if (plane.control_mode == &plane.mode_qstabilize) {
         // manual throttle
         if (plane.get_throttle_input() <= 0) {
