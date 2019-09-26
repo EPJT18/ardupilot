@@ -2771,7 +2771,7 @@ if(plane.throttle_percentage()<1){
     
     if(now-first_forward_motor_check_time<bl_startup_time){
         for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
-            if ((((uint8_t)bl_forward_motor_mask) & (1U<<i))) {
+            if ((((uint8_t)bl_fwd_motor_mask) & (1U<<i))) {
                 bl_last_spinning_packet[i]=now;
             }
         }
@@ -2791,7 +2791,7 @@ if(plane.throttle_percentage()<1){
               
         AP_BLHeli::telem_data td;
         
-        if (!(((uint8_t)bl_forward_motor_mask) & (1U<<i))) {
+        if (!(((uint8_t)bl_fwd_motor_mask) & (1U<<i))) {
             continue;
             
         }
@@ -2815,7 +2815,7 @@ if(plane.throttle_percentage()<1){
         
     }
 
-    return failed_motors
+    return failed_motors;
 
    
 #endif
