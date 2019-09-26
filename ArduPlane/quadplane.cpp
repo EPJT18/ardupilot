@@ -485,6 +485,8 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("SWOOP_OPTION", 21, QuadPlane, swoop_options, 0),
 
+    AP_GROUPINFO("M_FAIL_RANGE", 22, QuadPlane, motor_fail_rtl_range, 200),
+
     AP_GROUPEND
 };
 
@@ -1574,6 +1576,18 @@ void QuadPlane::update_transition(void)
             transition_start_ms = now;
         }
 
+        if (check_forward_motors_spinning()>0) {
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "Failed to complete takeoff, forward motor failure");
+            if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+                plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TAKEOFF);
+            }
+            else{
+                plane.set_mode(plane.mode_qrtl, MODE_REASON_VTOL_FAILED_TAKEOFF);
+            }
+            return;
+
+        }
+
         transition_low_airspeed_ms = now;
         if (have_airspeed && aspeed > plane.aparm.airspeed_min && !assisted_flight) {
             transition_state = TRANSITION_TIMER;
@@ -2611,9 +2625,9 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
 
     // reset takeoff start time if we aren't armed, as we won't have made any progress
     if (!hal.util->get_soft_armed()) {
-
-    }
         takeoff_start_time_ms = now;
+    }
+        
     // check for failure conditions
 
     if (is_positive(takeoff_failure_scalar) && ((now - takeoff_start_time_ms) > takeoff_time_limit_ms)) {
@@ -2628,6 +2642,19 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
         return false;
 
     }
+    //Add detection for failed forward motor start during climbout
+    if (check_forward_motors_spinning()>0) {
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Failed to complete takeoff, forward motor failure");
+        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+            plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TAKEOFF);
+        }
+        else{
+            plane.set_mode(plane.mode_qrtl, MODE_REASON_VTOL_FAILED_TAKEOFF);
+        }
+        return false;
+
+    }
+
     if (plane.current_loc.alt < plane.next_WP_loc.alt && !vtol_takeoff_yaw_wait) {
             return false;
     }

@@ -306,6 +306,7 @@ private:
     AP_Int16 bl_startup_time;
     AP_Int16 bl_fail_time;
     AP_Int32 swoop_options;
+    AP_Int16 motor_fail_rtl_range;
     AP_Int32 bl_last_spinning_packet[8];
     AP_Int32 last_hover_motor_check_time;
     AP_Int32 first_hover_motor_check_time;
