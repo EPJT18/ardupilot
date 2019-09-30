@@ -487,6 +487,8 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("M_FAIL_RANGE", 22, QuadPlane, motor_fail_rtl_range, 200),
 
+    AP_GROUPINFO("BL_F_TH_MIN", 23, QuadPlane, bl_fwd_throttle_min_percent, 8),
+
     AP_GROUPEND
 };
 
@@ -2760,8 +2762,9 @@ bool QuadPlane::check_land_final(void)
 
 uint8_t QuadPlane::check_forward_motors_spinning(void){
 
-if(plane.throttle_percentage()<1){
+if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_percent){
     first_forward_motor_check_time =0;
+    return 0;
 }
 
 #ifdef HAVE_AP_BLHELI_SUPPORT
@@ -2826,6 +2829,12 @@ return 0;
 
 //////
 bool QuadPlane::check_hover_motors_spinning(void){
+
+if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN || !plane.arming.is_armed()){    
+    first_hover_motor_check_time =0;
+    return true;
+}
+
 
 #ifdef HAVE_AP_BLHELI_SUPPORT
    

@@ -314,6 +314,7 @@ private:
     AP_Int32 last_forward_motor_check_time;
     AP_Int32 first_forward_motor_check_time;
     AP_Int32 time_since_last_forward_blh_warning;
+    AP_Int8 bl_fwd_throttle_min_percent;
 
     // control if a VTOL RTL will be used
     AP_Int8 rtl_mode;
