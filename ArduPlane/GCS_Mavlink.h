@@ -27,6 +27,7 @@ protected:
     MAV_RESULT _handle_command_preflight_calibration(const mavlink_command_long_t &packet) override;
     MAV_RESULT handle_command_int_packet(const mavlink_command_int_t &packet) override;
     MAV_RESULT handle_command_long_packet(const mavlink_command_long_t &packet) override;
+    MAV_RESULT handle_command_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) override;
 
     void send_position_target_global_int() override;
 

@@ -10,6 +10,7 @@
 #include <AC_Fence/AC_Fence.h>
 #include <AC_Avoidance/AC_Avoid.h>
 #include <AP_Proximity/AP_Proximity.h>
+#include "config.h"
 #include "qautotune.h"
 
 /*
@@ -42,6 +43,10 @@ public:
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
     static const struct AP_Param::GroupInfo var_info2[];
+
+#if PRECISION_LANDING == ENABLED
+    void set_precision_loiter_enabled(bool value) { _precision_loiter_enabled = value; }
+#endif
 
     void control_run(void);
     void control_auto(const Location &loc);
@@ -255,7 +260,12 @@ private:
 
     // calculate a stopping distance for fixed-wing to vtol transitions
     float stopping_distance(void);
-    
+
+#if PRECISION_LANDING == ENABLED
+    bool _precision_loiter_enabled;
+#endif
+    bool precland_active() const;
+
     AP_Int16 transition_time_ms;
 
     // transition deceleration, m/s/s
@@ -417,6 +427,9 @@ private:
 
     // time we last set the loiter target
     uint32_t last_loiter_ms;
+
+    // landing logic
+    AP_Int16 descend_radius;
 
     enum position_control_state {
         QPOS_POSITION1,

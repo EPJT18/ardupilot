@@ -498,6 +498,15 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("BL_F_TH_MIN", 24, QuadPlane, bl_fwd_throttle_min_percent, 8),
 
+    // @Param: DESCEND_RADIUS
+    // @DisplayName: Quadplane descent radius
+    // @Description: Quadplane will not descend unless it is within this radius of the landing location
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+
+    AP_GROUPINFO("DESCEND_RADIUS", 25, QuadPlane, descend_radius, 500),
     AP_GROUPEND
 };
 
@@ -1197,12 +1206,47 @@ bool QuadPlane::is_flying_vtol(void) const
  */
 float QuadPlane::landing_descent_rate_cms(float height_above_ground) const
 {
-    float ret = linear_interpolate(land_speed_cms, wp_nav->get_default_speed_down(),
+    float speed_down = wp_nav->get_default_speed_down();
+    float ret = linear_interpolate(land_speed_cms, speed_down,
                                    height_above_ground,
                                    land_final_alt, land_final_alt+6);
+#if PRECISION_LANDING == ENABLED
+    if (precland_active()) {
+        const float precland_acceptable_error = 100.0f;
+        const float precland_min_descent_speed = 10.0f;
+        float land_slowdown = MAX(0.0f, pos_control->get_horizontal_error()*(speed_down/precland_acceptable_error));
+        ret = MAX(precland_min_descent_speed, ret - land_slowdown);
+    }
+#endif
     return ret;
 }
 
+// return true if precision landing is active
+bool QuadPlane::precland_active(void) const
+{
+#if PRECISION_LANDING == ENABLED
+    if (plane.control_mode != &plane.mode_qland &&
+        plane.control_mode != &plane.mode_qloiter &&
+        plane.control_mode != &plane.mode_auto && 
+        !in_vtol_land_descent()
+        ) {
+        return false;
+    }
+    if (plane.control_mode == &plane.mode_qloiter &&
+        !_precision_loiter_enabled) {
+        return false;
+    }
+    AC_PrecLand &precland = plane.g2.precland;
+
+    // // If no landing target expected at WP (set by mission)
+    // if (precland.get_online_behaviour() == 0){
+    //     return false;
+    // }
+    return precland.enabled() && pos_control->is_active_xy() && precland.target_acquired();
+#else
+    return false;
+#endif
+}
 
 // run quadplane loiter controller
 void QuadPlane::control_loiter()
@@ -1244,6 +1288,25 @@ void QuadPlane::control_loiter()
 
     // run loiter controller
     loiter_nav->update();
+
+// TODO update this to match landing (when done)
+#if PRECISION_LANDING == ENABLED
+    if (precland_active()) {
+        AC_PrecLand &precland = plane.g2.precland;
+
+        Vector2f target_pos, target_vel_rel;
+        if (!precland.get_target_position_cm(target_pos)) {
+            target_pos.x = inertial_nav.get_position().x;
+            target_pos.y = inertial_nav.get_position().y;
+        }
+        if (!precland.get_target_velocity_relative_cms(target_vel_rel)) {
+            target_vel_rel.x = -inertial_nav.get_velocity().x;
+            target_vel_rel.y = -inertial_nav.get_velocity().y;
+        }
+        pos_control->set_xy_target(target_pos.x, target_pos.y);
+        pos_control->override_vehicle_velocity_xy(-target_vel_rel);
+    }
+#endif
 
     // nav roll and pitch are controller by loiter controller
     plane.nav_roll_cd = loiter_nav->get_roll();
@@ -2302,6 +2365,7 @@ void QuadPlane::vtol_position_controller(void)
     }
 
     case QPOS_POSITION2:
+        // TODO: timer here so that we can handle a precland timeout
     case QPOS_LAND_DESCEND:
         /*
           for final land repositioning and descent we run the position controller
@@ -2321,8 +2385,35 @@ void QuadPlane::vtol_position_controller(void)
         if (should_relax()) {
             loiter_nav->soften_for_landing();
         } else {
+
+#if PRECISION_LANDING == ENABLED
+
+
+            AC_PrecLand &precland = plane.g2.precland;
+            Vector2f target_pos, target_vel_rel;
+            
+            if (precland_active()){
+                // If target detected
+                if (precland.get_target_position_cm(target_pos)) {
+                    // update the new location
+                    pos_control->set_xy_target(target_pos.x, target_pos.y);
+                }
+
+                // If target velocity valid
+                if (precland.get_target_velocity_relative_cms(target_vel_rel)) {
+                    // override the vehicle velocity
+                    pos_control->override_vehicle_velocity_xy(-target_vel_rel);
+                }
+            }else{
+                // If precland disabled, land as usual
+                pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
+            }
+        
+#else            
             pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
+#endif
         }
+
         pos_control->update_xy_controller();
 
         // nav roll and pitch are controller by position controller
@@ -2639,6 +2730,12 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     attitude_control->reset_rate_controller_I_terms();
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
+
+// #if PRECISION_LANDING == ENABLED
+
+//     AC_PrecLand &precland = plane.g2.precland;
+//     precland.set_online_behaviour(cmd.content.vtol_land.precland_status);
+// #endif
     
     plane.set_next_WP(cmd.content.location);
     // initially aim for current altitude
@@ -2953,11 +3050,29 @@ bool QuadPlane::verify_vtol_land(void)
     if (!available()) {
         return true;
     }
+
+#if PRECISION_LANDING == ENABLED
+    AC_PrecLand &precland = plane.g2.precland;
+    bool precland_enabled = precland.enabled(); // TODO convert this to online enabled
+    bool target_position_confident = precland.target_pos_confident();
+    bool within_descending_radius = precland.get_target_distance_scalar()< descend_radius;
+    bool precland_descend = precland_active() &&
+                            target_position_confident &&
+                            within_descending_radius;
+#else
+    bool precland_enabled = false;
+    bool precland_descend = false;
+#endif
+
+// TODO: Timeout
+
     if (!check_hover_motors_spinning()&&in_vtol_land_approach()){
         plane.set_mode(plane.mode_loiter, MODE_REASON_VTOL_FAILED_TRANSITION);
     }
     if (poscontrol.state == QPOS_POSITION2 &&
-        plane.auto_state.wp_distance < 2) {
+        ((!precland_enabled && (plane.auto_state.wp_distance < descend_radius*0.01)) || 
+        precland_descend)) {
+
         poscontrol.state = QPOS_LAND_DESCEND;
         gcs().send_text(MAV_SEVERITY_INFO,"Land descend started");
         if (plane.control_mode == &plane.mode_auto) {
