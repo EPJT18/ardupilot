@@ -412,6 +412,9 @@ protected:
     MAV_RESULT handle_command_get_home_position(const mavlink_command_long_t &packet);
     MAV_RESULT handle_command_do_fence_enable(const mavlink_command_long_t &packet);
 
+    // default empty handling of LANDING_TARGET
+    virtual MAV_RESULT handle_command_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) { return MAV_RESULT_UNSUPPORTED; }
+    
     void handle_optical_flow(const mavlink_message_t &msg);
 
     MAV_RESULT handle_fixed_mag_cal_yaw(const mavlink_command_long_t &packet);
@@ -639,6 +642,7 @@ private:
                                            const float roll,
                                            const float pitch,
                                            const float yaw);
+    void handle_landing_target(const mavlink_message_t &msg);
 
     void lock_channel(const mavlink_channel_t chan, bool lock);
 

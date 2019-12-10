@@ -65,8 +65,15 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @DisplayName: Kalman Filter Accelerometer Noise
     // @Description: Kalman Filter Accelerometer Noise, higher values weight the input from the camera more, accels less
     // @Range: 0.5 5
-    // @User: Advanceds
+    // @User: Advanced
     AP_GROUPINFO("ACC_P_NSE", 6, AC_PrecLand, _accel_noise, 2.5f),
+
+    // @Param: COV_THRESH
+    // @DisplayName: Kalman Filter Covariance Threshold
+    // @Description: Kalman Filter Covariance Threshold, represents an acceptable confidence of target location to begin descent
+    // @Values: 0.001 0.1
+    // @User: Advanced
+    AP_GROUPINFO("COV_THRESH",    7, AC_PrecLand, _covariance_threshold, 0.01f),
 
     // @Param: CAM_POS_X
     // @DisplayName: Camera X position offset
@@ -85,14 +92,14 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Description: Z position of the camera in body frame. Positive Z is down from the origin.
     // @Units: m
     // @User: Advanced
-    AP_GROUPINFO("CAM_POS", 7, AC_PrecLand, _cam_offset, 0.0f),
+    AP_GROUPINFO("CAM_POS", 8, AC_PrecLand, _cam_offset, 0.0f),
 
     // @Param: BUS
     // @DisplayName: Sensor Bus
     // @Description: Precland sensor bus for I2C sensors.
     // @Values: -1:DefaultBus,0:InternalI2C,1:ExternalI2C
     // @User: Advanced
-    AP_GROUPINFO("BUS",    8, AC_PrecLand, _bus, -1),
+    AP_GROUPINFO("BUS",    9, AC_PrecLand, _bus, -1),
 
     // @Param: LAG
     // @DisplayName: Precision Landing sensor lag
@@ -102,7 +109,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Units: s
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("LAG", 9, AC_PrecLand, _lag, 0.02f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
+    AP_GROUPINFO("LAG", 10, AC_PrecLand, _lag, 0.02f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
 
     AP_GROUPEND
 };
@@ -250,12 +257,27 @@ bool AC_PrecLand::get_target_velocity_relative_cms(Vector2f& ret)
     return true;
 }
 
+float AC_PrecLand::get_target_distance_scalar(void)
+{
+    return norm(_target_pos_rel_out_NE.x, _target_pos_rel_out_NE.y)*100.0f;
+}
+
+float AC_PrecLand::get_ekf_x_cov()
+{
+    return _ekf_x.getPosCovariance();
+}
+
+float AC_PrecLand::get_ekf_y_cov()
+{
+    return _ekf_y.getPosCovariance();
+}
+
 // handle_msg - Process a LANDING_TARGET mavlink message
-void AC_PrecLand::handle_msg(const mavlink_message_t &msg)
+void AC_PrecLand::handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms)
 {
     // run backend update
     if (_backend != nullptr) {
-        _backend->handle_msg(msg);
+        _backend->handle_msg(packet, timestamp_ms);
     }
 }
 
@@ -354,6 +376,24 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
             break;
         }
     }
+}
+
+bool AC_PrecLand::target_pos_confident()
+{
+    switch (_estimator_type) {
+        case ESTIMATOR_TYPE_RAW_SENSOR: 
+        {
+            return true;
+        }
+        case ESTIMATOR_TYPE_KALMAN_FILTER: {
+            if (get_ekf_x_cov() < _covariance_threshold &&
+                get_ekf_y_cov() < _covariance_threshold)
+            {
+                return true;
+            }
+        }
+    }    
+    return false;
 }
 
 bool AC_PrecLand::retrieve_los_meas(Vector3f& target_vec_unit_body)

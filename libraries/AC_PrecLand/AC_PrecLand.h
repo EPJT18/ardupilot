@@ -52,7 +52,7 @@ public:
     // returns true if precision landing is healthy
     bool healthy() const { return _backend_state.healthy; }
 
-    // returns true if precision landing is enabled (used only for logging)
+    // returns true if precision landing is enabled
     bool enabled() const { return _enabled.get(); }
 
     // returns time of last update
@@ -82,11 +82,31 @@ public:
     // returns target velocity relative to vehicle
     bool get_target_velocity_relative_cms(Vector2f& ret);
 
+    // returns scalar distance from vehicle to target (cm)
+    float get_target_distance_scalar(void);
+
+    // returns the covariance of the target x pos kalman filter
+    float get_ekf_x_cov(void);
+
+    // returns the covariance of the target y pos kalman filter
+    float get_ekf_y_cov(void);
+
     // returns true when the landing target has been detected
     bool target_acquired();
 
     // process a LANDING_TARGET mavlink message
-    void handle_msg(const mavlink_message_t &msg);
+    void handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms);
+
+    // returns true when we are confident of the target's position
+    bool target_pos_confident(void);
+
+    // set precland behaviour online
+    void set_online_behaviour(uint8_t enabled_status){ _enabled_online = enabled_status; }
+    
+    // get precland behaviour online
+    enum PrecLandBehaviour get_online_behaviour() { return (enum PrecLandBehaviour)(_enabled_online); }
+
+
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
@@ -125,13 +145,15 @@ private:
     AP_Float                    _accel_noise;       // accelerometer process noise
     AP_Vector3f                 _cam_offset;        // Position of the camera relative to the CG
 
+    uint8_t                     _enabled_online;    // behaviour set by mission (online), does not write to param EEPROM
     uint32_t                    _last_update_ms;    // system time in millisecond when update was last called
     bool                        _target_acquired;   // true if target has been seen recently
     uint32_t                    _last_backend_los_meas_ms;  // system time target was last seen
 
     PosVelEKF                   _ekf_x, _ekf_y;     // Kalman Filter for x and y axis
     uint32_t                    _outlier_reject_count;  // mini-EKF's outlier counter (3 consecutive outliers lead to EKF accepting updates)
-    
+    AP_Float                    _covariance_threshold; // EKF covariance confidence threshold
+
     Vector3f                    _target_pos_rel_meas_NED; // target's relative position as 3D vector
 
     Vector2f                    _target_pos_rel_est_NE; // target's position relative to the IMU, not compensated for lag

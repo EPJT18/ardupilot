@@ -20,6 +20,11 @@ void GCS_Plane::update_vehicle_sensor_status_flags(void)
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_OPTICAL_FLOW;
     }
 #endif
+#if PRECISION_LANDING == ENABLED
+    if (plane.g2.precland.enabled()) {
+        control_sensors_present |= MAV_SYS_STATUS_SENSOR_VISION_POSITION;
+    }
+#endif
     if (plane.geofence_present()) {
         control_sensors_present |= MAV_SYS_STATUS_GEOFENCE;
     }
