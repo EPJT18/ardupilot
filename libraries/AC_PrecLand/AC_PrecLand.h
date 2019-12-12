@@ -49,6 +49,9 @@ public:
     // update_rate_hz should be the rate at which the update method will be called in hz
     void init(uint16_t update_rate_hz);
 
+    // reinit precision landing immediately before use
+    void reinit(void);
+
     // returns true if precision landing is healthy
     bool healthy() const { return _backend_state.healthy; }
 
@@ -106,7 +109,8 @@ public:
     // get precland behaviour online
     enum PrecLandBehaviour get_online_behaviour() { return (enum PrecLandBehaviour)(_enabled_online); }
 
-
+    // landing timeout
+    bool timeout(void);
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
@@ -144,9 +148,11 @@ private:
     AP_Float                    _land_ofs_cm_y;     // Desired landing position of the camera right of the target in vehicle body frame
     AP_Float                    _accel_noise;       // accelerometer process noise
     AP_Vector3f                 _cam_offset;        // Position of the camera relative to the CG
+    AP_Int8                     _timeout;           // Target search timeout
 
     uint8_t                     _enabled_online;    // behaviour set by mission (online), does not write to param EEPROM
     uint32_t                    _last_update_ms;    // system time in millisecond when update was last called
+    uint32_t                    _commence_time;     // Timestamp when precision landing commences looking for the target, used in timeout
     bool                        _target_acquired;   // true if target has been seen recently
     uint32_t                    _last_backend_los_meas_ms;  // system time target was last seen
 

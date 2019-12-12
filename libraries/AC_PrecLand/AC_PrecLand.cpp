@@ -25,6 +25,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Description: Precision Land Type
     // @Values: 0:None, 1:CompanionComputer, 2:IRLock, 3:SITL_Gazebo, 4:SITL
     // @User: Advanced
+    // @RebootRequired: True
     AP_GROUPINFO("TYPE",    1, AC_PrecLand, _type, 0),
 
     // @Param: YAW_ALIGN
@@ -111,6 +112,16 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("LAG", 10, AC_PrecLand, _lag, 0.02f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
 
+    // @Param: TIMEOUT
+    // @DisplayName: Precision Landing timeout
+    // @Description: How long to wait to capture target before giving up. 
+    // @Range: 0 20
+    // @Increment: 1
+    // @Units: s
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("TIMEOUT", 11, AC_PrecLand, _timeout, 0.02f),
+
     AP_GROUPEND
 };
 
@@ -136,6 +147,9 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     // default health to false
     _backend = nullptr;
     _backend_state.healthy = false;
+
+    // initialise timeout clock
+    _commence_time = 0;
 
     // create inertial history buffer
     // constrain lag parameter to be within bounds
@@ -178,6 +192,10 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     if (_backend != nullptr) {
         _backend->init();
     }
+}
+
+void AC_PrecLand::reinit(void){
+    _commence_time = AP_HAL::millis();
 }
 
 // update - give chance to driver to get updates from sensor
@@ -487,4 +505,14 @@ void AC_PrecLand::run_output_prediction()
     Vector3f land_ofs_ned_m = _ahrs.get_rotation_body_to_ned() * Vector3f(_land_ofs_cm_x,_land_ofs_cm_y,0) * 0.01f;
     _target_pos_rel_out_NE.x += land_ofs_ned_m.x;
     _target_pos_rel_out_NE.y += land_ofs_ned_m.y;
+}
+
+bool AC_PrecLand::timeout(void){
+
+    // if timer hasn't been started yet, or has been started and since expired
+    if (!(_commence_time == 0) && (AP_HAL::millis() - _commence_time) >= (uint32_t)(_timeout.get()*1000)){
+        return true;
+    }else{
+        return false;
+    }
 }
