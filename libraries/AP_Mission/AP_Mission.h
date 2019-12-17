@@ -478,6 +478,13 @@ public:
         return _rsem;
     }
 
+    /// search_forward_for_cmd_type - search forward in mission for nav command
+    //      starting_index is used to set the index from which searching will begin, leave as 0 to search from the current navigation target
+    //      command_type - command type to find
+    ///     accounts for do-jump commands
+    //      returns true if command is found
+    bool search_forward_for_cmd_type(uint16_t start_index, MAV_CMD command_type);
+
     // returns true if the mission contains the requested items
     bool contains_item(MAV_CMD command) const;
 

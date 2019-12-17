@@ -346,6 +346,27 @@ bool AP_Mission::is_nav_cmd(const Mission_Command& cmd)
     return (cmd.id <= MAV_CMD_NAV_LAST || cmd.id == MAV_CMD_NAV_SET_YAW_SPEED);
 }
 
+/// search_forward_for_cmd_type - search forward in mission for nav command
+//      starting_index is used to set the index from which searching will begin, leave as 0 to search from the current navigation target
+//      command_type - command type to find
+///     accounts for do-jump commands
+//      returns true if command is found
+bool AP_Mission::search_forward_for_cmd_type(uint16_t start_index, MAV_CMD command_type){
+    Mission_Command cmd;
+
+    // get next command
+    if (!get_next_cmd(start_index, cmd, false)) {
+        // no more commands so return failure
+        return false;
+    }
+    // if matches desired command type, return true
+    if (cmd.id == command_type){
+        return true;
+    }
+
+    return search_forward_for_cmd_type(start_index+1, command_type);
+}
+
 /// get_next_nav_cmd - gets next "navigation" command found at or after start_index
 ///     returns true if found, false if not found (i.e. reached end of mission command list)
 ///     accounts for do_jump commands but never increments the jump's num_times_run (advance_current_nav_cmd is responsible for this)

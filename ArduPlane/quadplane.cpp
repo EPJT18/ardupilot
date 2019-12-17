@@ -3056,16 +3056,23 @@ bool QuadPlane::verify_vtol_land(void)
 #if PRECISION_LANDING == ENABLED
     AC_PrecLand &precland = plane.g2.precland;
 
+    bool precland_enabled = precland.enabled(); // TODO convert this to online enabled
+
     if (poscontrol.state == QPOS_POSITION2){
         // check for target timeout
-
-        //TODO: check whether to abort or not if so, turn off prec land
         if (precland.timeout()){
-            return true;
+
+            // abort landing if vland mode calls for it and is not the last takeoff command in the mission 
+            if (precland.abort_if_not_confident() && 
+                plane.mission.search_forward_for_cmd_type(plane.mission.get_current_nav_cmd().index, MAV_CMD_NAV_VTOL_TAKEOFF)){
+                return true; // abort landing
+            }else{
+                precland_enabled = false;
+            }
         }
     }
 
-    bool precland_enabled = precland.enabled(); // TODO convert this to online enabled
+    
     bool target_position_confident = precland.target_pos_confident();
     bool within_descending_radius = precland.get_target_distance_scalar()< descend_radius;
     bool precland_descend = precland_active() &&

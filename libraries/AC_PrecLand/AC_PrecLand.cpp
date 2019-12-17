@@ -15,8 +15,8 @@ extern const AP_HAL::HAL& hal;
 const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Param: ENABLED
     // @DisplayName: Precision Land enabled/disabled and behaviour
-    // @Description: Precision Land enabled/disabled and behaviour
-    // @Values: 0:Disabled, 1:Enabled
+    // @Description: Precision Land enabled/disabled and behaviour if the target is not confidentally detected
+    // @Values: 0:Disabled, 1:Enabled, abort landing, 2:Enabled, proceed to WP location
     // @User: Advanced
     AP_GROUPINFO_FLAGS("ENABLED", 0, AC_PrecLand, _enabled, 0, AP_PARAM_FLAG_ENABLE),
 
@@ -225,7 +225,7 @@ void AC_PrecLand::update(float rangefinder_alt_cm, bool rangefinder_alt_valid)
     _inertial_history->push_force(inertial_data_newest);
 
     // update estimator of target position
-    if (_backend != nullptr && _enabled) {
+    if (_backend != nullptr && _enabled != 0) {
         _backend->update();
         run_estimator(rangefinder_alt_cm*0.01f, rangefinder_alt_valid);
     }
@@ -235,6 +235,15 @@ bool AC_PrecLand::target_acquired()
 {
     _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < 2000;
     return _target_acquired;
+}
+
+bool AC_PrecLand::abort_if_not_confident()
+{
+    if (_enabled == 1){
+        return true;
+    }else{
+        return false;
+    }
 }
 
 bool AC_PrecLand::get_target_position_cm(Vector2f& ret)

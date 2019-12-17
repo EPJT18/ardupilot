@@ -58,6 +58,9 @@ public:
     // returns true if precision landing is enabled
     bool enabled() const { return _enabled.get(); }
 
+    // returns true if behaviour set to abort if target pos is deemed not confident
+    bool abort_if_not_confident();
+
     // returns time of last update
     uint32_t last_update_ms() const { return _last_update_ms; }
 
