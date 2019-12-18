@@ -88,6 +88,9 @@ public:
     // returns target velocity relative to vehicle
     bool get_target_velocity_relative_cms(Vector2f& ret);
 
+    // returns target location as a GPS coordinate, pass in vehicle loc
+    Location get_target_est_loc(void);
+
     // returns scalar distance from vehicle to target (cm)
     float get_target_distance_scalar(void);
 

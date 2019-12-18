@@ -169,8 +169,8 @@ struct PACKED log_Precland {
     uint64_t time_us;
     uint8_t healthy;
     uint8_t target_acquired;
-    float pos_x;
-    float pos_y;
+    int32_t lat;
+    int32_t lng;
     float meas_x;
     float meas_y;
     float meas_z;
@@ -192,18 +192,23 @@ void Plane::Log_Write_Precland()
 
     Vector3f target_pos_meas = Vector3f(0.0f,0.0f,0.0f);
     Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
-    g2.precland.get_target_position_cm(target_pos_abs);
+    g2.precland.get_target_position_relative_cm(target_pos_abs);
     g2.precland.get_target_position_measurement_cm(target_pos_meas);
     float x_cov = g2.precland.get_ekf_x_cov(); 
     float y_cov = g2.precland.get_ekf_y_cov();
+
+
+    // try to log pos in lat/long
+    Location target_loc;
+    Location target_pos_gps = g2.precland.get_target_est_loc();
 
     struct log_Precland pkt = {
         LOG_PACKET_HEADER_INIT(LOG_PRECLAND_MSG),
         time_us         : AP_HAL::micros64(),
         healthy         : g2.precland.healthy(),
         target_acquired : g2.precland.target_acquired(),
-        pos_x           : target_pos_abs.x,
-        pos_y           : target_pos_abs.y,
+        lat             : target_pos_gps.lat,
+        lng             : target_pos_gps.lng,
         meas_x          : target_pos_meas.x,
         meas_y          : target_pos_meas.y,
         meas_z          : target_pos_meas.z,
@@ -333,7 +338,7 @@ const struct LogStructure Plane::log_structure[] = {
       "AETR", "Qhhhhh",  "TimeUS,Ail,Elev,Thr,Rudd,Flap", "s-----", "F-----" },
 #if PRECISION_LANDING == ENABLED
     { LOG_PRECLAND_MSG, sizeof(log_Precland),
-      "PL",    "QBBfffffffIIB",    "TimeUS,Heal,TAcq,pX,pY,mX,mY,mZ,covX,covY,LastMeasUS,EKFOutl,Est", "s--ddddm--s--","F--0000B00C--" },
+      "PL",    "QBBLLfffffIIB",    "TimeUS,Heal,TAcq,lat,lng,mX,mY,mZ,covX,covY,LastMeasUS,EKFO,Est", "s--ddddm--s--","F--0000B00C--" },
 #endif
 };
 

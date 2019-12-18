@@ -294,6 +294,24 @@ bool AC_PrecLand::get_target_velocity_relative_cms(Vector2f& ret)
     return true;
 }
 
+Location AC_PrecLand::get_target_est_loc(void){
+    Location current_loc;
+    if (!target_acquired()){
+        // return uninitialised location, fine for logging
+        return current_loc;
+    }
+    // get relative position
+    AP::ahrs().get_position(current_loc);
+    
+    Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
+    
+    get_target_position_relative_cm(target_pos_abs);
+
+    // ofset relative target position from absolute vehicle position
+    current_loc.offset(target_pos_abs.x*0.01, target_pos_abs.y*0.01);
+    return current_loc;
+}
+
 float AC_PrecLand::get_target_distance_scalar(void)
 {
     return norm(_target_pos_rel_out_NE.x, _target_pos_rel_out_NE.y)*100.0f;
