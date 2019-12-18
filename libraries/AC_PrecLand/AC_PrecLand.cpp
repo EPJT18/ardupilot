@@ -120,7 +120,17 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Units: s
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("TIMEOUT", 11, AC_PrecLand, _timeout, 0.02f),
+    AP_GROUPINFO("TIMEOUT", 11, AC_PrecLand, _timeout, 15),
+
+    // @Param: TACQ_TOUT
+    // @DisplayName: Precision Landing timeout
+    // @Description: How long to wait to capture target before resetting EKF
+    // @Range: 0 20
+    // @Increment: 1
+    // @Units: s
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("TACQ_TOUT", 12, AC_PrecLand, _tacq_timeout, 5),
 
     AP_GROUPEND
 };
@@ -233,7 +243,7 @@ void AC_PrecLand::update(float rangefinder_alt_cm, bool rangefinder_alt_valid)
 
 bool AC_PrecLand::target_acquired()
 {
-    _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < 2000;
+    _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < (uint8_t)_tacq_timeout.get()*1000;
     return _target_acquired;
 }
 
