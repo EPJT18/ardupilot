@@ -105,7 +105,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Param: LAG
     // @DisplayName: Precision Landing sensor lag
     // @Description: Precision Landing sensor lag, to cope with variable landing_target latency
-    // @Range: 0.02 0.250
+    // @Range: 0.02 0.75
     // @Increment: 1
     // @Units: s
     // @User: Advanced
@@ -124,7 +124,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
 
     // @Param: TACQ_TOUT
     // @DisplayName: Precision Landing timeout
-    // @Description: How long to wait to capture target before resetting EKF
+    // @Description: How long maintain target acquired target before resetting EKF
     // @Range: 0 20
     // @Increment: 1
     // @Units: s
@@ -163,7 +163,7 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
 
     // create inertial history buffer
     // constrain lag parameter to be within bounds
-    _lag = constrain_float(_lag, 0.02f, 0.25f);
+    _lag = constrain_float(_lag, 0.02f, 0.75f);
 
     // calculate inertial buffer size from lag and minimum of main loop rate and update_rate_hz argument
     const uint16_t inertial_buffer_size = MAX((uint16_t)roundf(_lag * MIN(update_rate_hz, AP::scheduler().get_loop_rate_hz())), 1);
@@ -254,6 +254,10 @@ bool AC_PrecLand::abort_if_not_confident()
     }else{
         return false;
     }
+}
+
+uint32_t AC_PrecLand::get_lag(){
+    return _backend->get_lag();
 }
 
 bool AC_PrecLand::get_target_position_cm(Vector2f& ret)

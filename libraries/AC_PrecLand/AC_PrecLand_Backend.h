@@ -39,6 +39,9 @@ public:
 
     // get bus parameter
     int8_t get_bus(void) const { return _frontend._bus.get(); }
+
+    // get latest lag
+    virtual uint32_t get_lag(void) = 0;
     
 protected:
     const AC_PrecLand&  _frontend;          // reference to precision landing front end

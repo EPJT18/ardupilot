@@ -103,6 +103,9 @@ public:
     // returns true when the landing target has been detected
     bool target_acquired();
 
+    // get the lag of the most recent packet
+    uint32_t get_lag();
+
     // process a LANDING_TARGET mavlink message
     void handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms);
 

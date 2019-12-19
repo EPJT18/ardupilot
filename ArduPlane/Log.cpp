@@ -178,7 +178,7 @@ struct PACKED log_Precland {
     float cov_y;
     uint32_t last_meas;
     uint32_t ekf_outcount;
-    uint8_t estimator;
+    uint32_t lag;
 };
 
 // Write a precision landing entry
@@ -216,7 +216,7 @@ void Plane::Log_Write_Precland()
         cov_y           : y_cov,
         last_meas       : g2.precland.last_update_ms(),
         ekf_outcount    : g2.precland.ekf_outlier_count(),
-        estimator       : g2.precland.estimator_type()
+        lag             : g2.precland.get_lag()
     };
     logger.WriteBlock(&pkt, sizeof(pkt));
  #endif     // PRECISION_LANDING == ENABLED
@@ -338,7 +338,7 @@ const struct LogStructure Plane::log_structure[] = {
       "AETR", "Qhhhhh",  "TimeUS,Ail,Elev,Thr,Rudd,Flap", "s-----", "F-----" },
 #if PRECISION_LANDING == ENABLED
     { LOG_PRECLAND_MSG, sizeof(log_Precland),
-      "PL",    "QBBLLfffffIIB",    "TimeUS,Heal,TAcq,lat,lng,mX,mY,mZ,covX,covY,LastMeasUS,EKFO,Est", "s--ddddm--s--","F--0000B00C--" },
+      "PL",    "QBBLLfffffIII",    "TimeUS,Heal,TAcq,lat,lng,mX,mY,mZ,covX,covY,LastMeasUS,EKFO,Lag", "s--ddddm--s-s","F--0000B00C-C" },
 #endif
 };
 

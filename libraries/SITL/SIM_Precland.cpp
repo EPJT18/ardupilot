@@ -98,12 +98,26 @@ const AP_Param::GroupInfo SIM_Precland::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("DIST_LMT", 8, SIM_Precland, _dist_limit, 10),
 
+    // @Param: SUCC_RATE
+    // @DisplayName: Simulated success rate of detecting target
+    // @Description: Simulated success rate of detecting target
+    // @Units: m
+    // @Range: 0 100
+    // @User: Advanced
+    AP_GROUPINFO("SUC_RATE", 9, SIM_Precland, _success_rate, 100),
+
     AP_GROUPEND
 };
 
 void SIM_Precland::update(const Location &loc, const Vector3f &position)
 {
     const uint32_t now = AP_HAL::millis();
+
+    // simulated generic camera issues detecting target
+    if (abs(rand_float())>_success_rate*0.01){
+        _healthy = false;
+        return;
+    }
 
     if (!_enable) {
         _healthy = false;
