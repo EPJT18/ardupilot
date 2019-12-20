@@ -171,8 +171,8 @@ struct PACKED log_Precland {
     uint8_t target_acquired;
     int32_t lat;
     int32_t lng;
-    float meas_x;
-    float meas_y;
+    int32_t rlat;
+    int32_t rlng;
     float meas_z;
     float cov_x;
     float cov_y;
@@ -199,8 +199,8 @@ void Plane::Log_Write_Precland()
 
 
     // try to log pos in lat/long
-    Location target_loc;
     Location target_pos_gps = g2.precland.get_target_est_loc();
+    Location raw_target_pos_gps = g2.precland.get_raw_target_est_loc();
 
     struct log_Precland pkt = {
         LOG_PACKET_HEADER_INIT(LOG_PRECLAND_MSG),
@@ -209,8 +209,8 @@ void Plane::Log_Write_Precland()
         target_acquired : g2.precland.target_acquired(),
         lat             : target_pos_gps.lat,
         lng             : target_pos_gps.lng,
-        meas_x          : target_pos_meas.x,
-        meas_y          : target_pos_meas.y,
+        rlat            : raw_target_pos_gps.lat,
+        rlng            : raw_target_pos_gps.lng,
         meas_z          : target_pos_meas.z,
         cov_x           : x_cov,
         cov_y           : y_cov,
@@ -338,7 +338,7 @@ const struct LogStructure Plane::log_structure[] = {
       "AETR", "Qhhhhh",  "TimeUS,Ail,Elev,Thr,Rudd,Flap", "s-----", "F-----" },
 #if PRECISION_LANDING == ENABLED
     { LOG_PRECLAND_MSG, sizeof(log_Precland),
-      "PL",    "QBBLLfffffIII",    "TimeUS,Heal,TAcq,lat,lng,mX,mY,mZ,covX,covY,LastMeasUS,EKFO,Lag", "s--ddddm--s-s","F--0000B00C-C" },
+      "PL",    "QBBLLLLfffIII",    "TimeUS,Heal,TAcq,lat,lng,rlat,rlng,mZ,covX,covY,LastUS,EKFO,Lag", "s--DUDUm--s-s","F--0000B00C-C" },
 #endif
 };
 

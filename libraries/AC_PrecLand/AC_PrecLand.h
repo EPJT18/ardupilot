@@ -85,11 +85,17 @@ public:
     // returns target position relative to vehicle
     bool get_target_position_relative_cm(Vector2f& ret);
 
+    // returns target position relative to vehicle
+    bool get_raw_target_position_relative_cm(Vector2f& ret);
+
     // returns target velocity relative to vehicle
     bool get_target_velocity_relative_cms(Vector2f& ret);
 
     // returns target location as a GPS coordinate, pass in vehicle loc
     Location get_target_est_loc(void);
+
+    // returns target location as a GPS coordinate, pass in vehicle loc
+    Location get_raw_target_est_loc(void);
 
     // returns scalar distance from vehicle to target (cm)
     float get_target_distance_scalar(void);
@@ -144,7 +150,7 @@ private:
 
     // calculate target's position and velocity relative to the vehicle (used as input to position controller)
     // results are stored in_target_pos_rel_out_NE, _target_vel_rel_out_NE
-    void run_output_prediction();
+    void run_output_prediction(Vector2f& target_pos_rel_out_NE, Vector2f& target_vel_rel_out_NE, Vector2f target_pos_rel_est_NE, Vector2f target_vel_rel_est_NE);
 
     // parameters
     AP_Int8                     _enabled;           // enabled/disabled and behaviour
@@ -177,6 +183,13 @@ private:
 
     Vector2f                    _target_pos_rel_out_NE; // target's position relative to the camera, fed into position controller
     Vector2f                    _target_vel_rel_out_NE; // target's velocity relative to the CG, fed into position controller
+
+    // logging of raw est alongside EKF, this isn't used if PLND_TYPE=0
+    Vector3f                    _raw_target_pos_rel_meas_NED; // target's relative position as 3D vector
+    Vector2f                    _raw_target_pos_rel_est_NE; // target's position relative to the IMU, not compensated for lag
+    Vector2f                    _raw_target_vel_rel_est_NE; // target's velocity relative to the IMU, not compensated for lag
+    Vector2f                    _raw_target_pos_rel_out_NE; // raw target's position relative to the camera, fed into position controller
+    Vector2f                    _raw_target_vel_rel_out_NE; // raw target's velocity relative to the CG, fed into position controller
 
     // structure and buffer to hold a history of vehicle velocity
     struct inertial_data_frame_s {

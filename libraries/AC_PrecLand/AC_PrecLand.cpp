@@ -289,6 +289,15 @@ bool AC_PrecLand::get_target_position_relative_cm(Vector2f& ret)
     return true;
 }
 
+bool AC_PrecLand::get_raw_target_position_relative_cm(Vector2f& ret)
+{
+    if (!target_acquired()) {
+        return false;
+    }
+    ret = _raw_target_pos_rel_out_NE*100.0f;
+    return true;
+}
+
 bool AC_PrecLand::get_target_velocity_relative_cms(Vector2f& ret)
 {
     if (!target_acquired()) {
@@ -310,6 +319,24 @@ Location AC_PrecLand::get_target_est_loc(void){
     Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
     
     get_target_position_relative_cm(target_pos_abs);
+
+    // ofset relative target position from absolute vehicle position
+    current_loc.offset(target_pos_abs.x*0.01, target_pos_abs.y*0.01);
+    return current_loc;
+}
+
+Location AC_PrecLand::get_raw_target_est_loc(void){
+    Location current_loc;
+    if (!target_acquired()){
+        // return uninitialised location, fine for logging
+        return current_loc;
+    }
+    // get relative position
+    AP::ahrs().get_position(current_loc);
+    
+    Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
+    
+    get_raw_target_position_relative_cm(target_pos_abs);
 
     // ofset relative target position from absolute vehicle position
     current_loc.offset(target_pos_abs.x*0.01, target_pos_abs.y*0.01);
@@ -380,7 +407,7 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
 
             // Output prediction
             if (target_acquired()) {
-                run_output_prediction();
+                run_output_prediction(_target_pos_rel_out_NE, _target_vel_rel_out_NE,_target_pos_rel_est_NE, _target_vel_rel_est_NE);
             }
             break;
         }
@@ -392,11 +419,23 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
 
                 _ekf_x.predict(dt, -vehicleDelVel.x, _accel_noise*dt);
                 _ekf_y.predict(dt, -vehicleDelVel.y, _accel_noise*dt);
+
+                // raw for logging
+                _raw_target_pos_rel_est_NE.x -= inertial_data_delayed->inertialNavVelocity.x * inertial_data_delayed->dt;
+                _raw_target_pos_rel_est_NE.y -= inertial_data_delayed->inertialNavVelocity.y * inertial_data_delayed->dt;
+                _raw_target_vel_rel_est_NE.x = -inertial_data_delayed->inertialNavVelocity.x;
+                _raw_target_vel_rel_est_NE.y = -inertial_data_delayed->inertialNavVelocity.y;
             }
 
             // Update if a new Line-Of-Sight measurement is available
             if (construct_pos_meas_using_rangefinder(rangefinder_alt_m, rangefinder_alt_valid)) {
                 float xy_pos_var = sq(_target_pos_rel_meas_NED.z*(0.01f + 0.01f*AP::ahrs().get_gyro().length()) + 0.02f);
+
+                _raw_target_pos_rel_est_NE.x = _raw_target_pos_rel_meas_NED.x;
+                _raw_target_pos_rel_est_NE.y = _raw_target_pos_rel_meas_NED.y;
+                _raw_target_vel_rel_est_NE.x = -inertial_data_delayed->inertialNavVelocity.x;
+                _raw_target_vel_rel_est_NE.y = -inertial_data_delayed->inertialNavVelocity.y;
+
                 if (!target_acquired()) {
                     // reset filter state
                     if (inertial_data_delayed->inertialNavVelocityValid) {
@@ -430,7 +469,10 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
                 _target_vel_rel_est_NE.x = _ekf_x.getVel();
                 _target_vel_rel_est_NE.y = _ekf_y.getVel();
 
-                run_output_prediction();
+                run_output_prediction(_target_pos_rel_out_NE, _target_vel_rel_out_NE,_target_pos_rel_est_NE, _target_vel_rel_est_NE);
+
+                // raw logging
+                run_output_prediction(_raw_target_pos_rel_out_NE, _raw_target_vel_rel_out_NE, _raw_target_pos_rel_est_NE, _raw_target_vel_rel_est_NE);
             }
             break;
         }
@@ -508,10 +550,10 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
     return false;
 }
 
-void AC_PrecLand::run_output_prediction()
+void AC_PrecLand::run_output_prediction(Vector2f& target_pos_rel_out_NE, Vector2f& target_vel_rel_out_NE, Vector2f target_pos_rel_est_NE, Vector2f target_vel_rel_est_NE)
 {
-    _target_pos_rel_out_NE = _target_pos_rel_est_NE;
-    _target_vel_rel_out_NE = _target_vel_rel_est_NE;
+    target_pos_rel_out_NE = target_pos_rel_est_NE;
+    target_vel_rel_out_NE = target_vel_rel_est_NE;
 
     // Predict forward from delayed time horizon
     for (uint8_t i=1; i<_inertial_history->available(); i++) {
