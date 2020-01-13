@@ -81,6 +81,15 @@ const AP_Param::GroupInfo AP_RollController::var_info[] = {
 	// @User: User
 	AP_GROUPINFO("FF",        6, AP_RollController, gains.FF,          0.0f),
 
+	// @Param: A
+	// @DisplayName: Maximum Roll Acceleration
+	// @Description: Maximum Acceleration of Roll rate for nav_rll (deg/s/s). 
+	// @Range: 1 1000
+	// @Increment: 1
+	// @User: User
+	AP_GROUPINFO("AMAX",        7, AP_RollController, gains.amax,         40),
+
+
 	AP_GROUPEND
 };
 
