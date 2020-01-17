@@ -646,7 +646,7 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         // allow user to override acceptance radius
         acceptance_distance_m = cmd_acceptance_distance;
     } else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
+        acceptance_distance_m = nav_controller->turn_distance(ahrs.groundspeed(), auto_state.next_turn_angle);
     } else {
 
     }

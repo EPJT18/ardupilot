@@ -38,6 +38,15 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FRAME("LIM_BANK",   3, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
 
+    // @Param: AUTO_LIM_BANK
+    // @DisplayName:  Bank Angle for calculating turn in point in auto nav
+    // @Description: Blank
+    // @Units: deg
+    // @Range: 0 89
+    // @User: Advanced
+    AP_GROUPINFO("A_BANK",   4, AP_L1_Control, _auto_bank_limit, 30.0f),
+
+
     AP_GROUPEND
 };
 
@@ -114,7 +123,10 @@ int32_t AP_L1_Control::target_bearing_cd(void) const
 float AP_L1_Control::turn_distance(float wp_radius) const
 {
     wp_radius *= sq(_ahrs.get_EAS2TAS());
+    
     return MIN(wp_radius, _L1_dist);
+
+    //return MIN(wp_radius,)
 }
 
 /*
@@ -125,15 +137,14 @@ float AP_L1_Control::turn_distance(float wp_radius) const
   they have reached the waypoint early, which makes things like camera
   trigger and ball drop at exact positions under mission control much easier
  */
-float AP_L1_Control::turn_distance(float wp_radius, float turn_angle) const
+float AP_L1_Control::turn_distance(float groundspeed, float turn_angle) const
 {
-    float distance_90 = turn_distance(wp_radius);
-    turn_angle = fabsf(turn_angle);
-    if (turn_angle >= 90) {
-        return distance_90;
-    }
-    return distance_90 * turn_angle / 90.0f;
+    float turnRadius= groundspeed*groundspeed/(10*tanf(radians(_auto_bank_limit)));
+    float returnValue =turnRadius/tanf(radians((180.0f-abs(turn_angle))/2));
+    return returnValue;
 }
+
+
 
 float AP_L1_Control::loiter_radius(const float radius) const
 {
