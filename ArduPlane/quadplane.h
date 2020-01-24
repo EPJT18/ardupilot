@@ -179,7 +179,7 @@ private:
     AP_Int16 pilot_accel_z;
 
     // check for quadplane assistance needed
-    bool assistance_needed(float aspeed);
+    bool assistance_needed();
 
     // update transition handling
     void update_transition(void);
@@ -286,8 +286,14 @@ private:
 
     // altitude to trigger assistance
     AP_Int16 assist_alt;
+    AP_Int16 assist_enable;
+    AP_Int16 assist_timeout;
     uint32_t alt_error_start_ms;
+    uint32_t hover_assist_timer;
+    bool hover_assist_timer_running;
     bool in_alt_assist;
+    bool in_att_assist;
+    bool in_speed_assist;
 
     // maximum yaw rate in degrees/second
     AP_Float yaw_rate_max;

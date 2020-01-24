@@ -498,6 +498,10 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("BL_F_TH_MIN", 24, QuadPlane, bl_fwd_throttle_min_percent, 8),
 
+    AP_GROUPINFO("H_ASSIST_EN", 25, QuadPlane, assist_enable, 0),
+
+    AP_GROUPINFO("H_A_TIMEOUT", 26, QuadPlane, assist_timeout, 15),
+
     AP_GROUPEND
 };
 
@@ -1420,90 +1424,57 @@ float QuadPlane::desired_auto_yaw_rate_cds(void) const
 /*
   return true if the quadplane should provide stability assistance
  */
-bool QuadPlane::assistance_needed(float aspeed)
+bool QuadPlane::assistance_needed()
 {
-    if (assist_speed <= 0) {
+    if (assist_enable <= 0) {
         // assistance disabled
         in_angle_assist = false;
-        angle_error_start_ms = 0;
+        in_speed_assist = false;
+        in_att_assist = false;
         return false;
     }
 
-    if (aspeed < assist_speed) {
-        // assistance due to Q_ASSIST_SPEED
-        in_angle_assist = false;
-        angle_error_start_ms = 0;
-        return true;
-    }
+    float aspeed;
+    bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
 
-    const uint32_t now = AP_HAL::millis();
-
-    /*
-      optional assistance when altitude is too close to the ground
-     */
-    if (assist_alt > 0) {
-        float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
-        if (height_above_ground < assist_alt) {
-            if (alt_error_start_ms == 0) {
-                alt_error_start_ms = now;
-            }
-            if (now - alt_error_start_ms > 500) {
-                // we've been below assistant alt for 0.5s
-                if (!in_alt_assist) {
-                    in_alt_assist = true;
-                    gcs().send_text(MAV_SEVERITY_INFO, "Alt assist %.1fm", height_above_ground);
-                }
-                return true;
-            }
-        } else {
-            in_alt_assist = false;
-            alt_error_start_ms = 0;
+    if (have_airspeed && assist_speed > 0 && aspeed < assist_speed) {
+        if (!in_speed_assist) {
+            in_speed_assist = true;
+            gcs().send_text(MAV_SEVERITY_INFO, "Speed assist %d", (int)aspeed);
         }
     }
-
-    if (assist_angle <= 0) {
-        in_angle_assist = false;
-        angle_error_start_ms = 0;
-        return false;
+    else{
+        in_speed_assist = false;
     }
-
-    /*
-      now check if we should provide assistance due to attitude error
-     */
-    /*
-    const uint16_t allowed_envelope_error_cd = 500U;
-    if (labs(ahrs.roll_sensor) <= plane.aparm.roll_limit_cd+allowed_envelope_error_cd &&
-        ahrs.pitch_sensor < plane.aparm.pitch_limit_max_cd+allowed_envelope_error_cd &&
-        ahrs.pitch_sensor > -(allowed_envelope_error_cd-plane.aparm.pitch_limit_min_cd)) {
-        // we are inside allowed attitude envelope
-        in_angle_assist = false;
-        angle_error_start_ms = 0;
-        return false;
-    }
-    */
     
-    int32_t max_angle_cd = 100U*assist_angle;
-    if ((labs(ahrs.roll_sensor - plane.nav_roll_cd) < max_angle_cd &&
-         labs(ahrs.pitch_sensor - plane.nav_pitch_cd) < max_angle_cd)) {
-        // not beyond angle error
-        angle_error_start_ms = 0;
-        in_angle_assist = false;
-        return false;
+    if (assist_alt > 0 && abs(plane.altitude_error_cm)>assist_alt*100) {
+        if (!in_alt_assist) {
+            in_alt_assist = true;
+            gcs().send_text(MAV_SEVERITY_INFO, "Alt assist %d", (int)plane.altitude_error_cm/100);
+        }
+    }
+    else{
+        in_alt_assist = false;
     }
 
-    if (angle_error_start_ms == 0) {
-        angle_error_start_ms = now;
+    if ((labs(ahrs.roll_sensor - plane.nav_roll_cd) > 100U*assist_angle || labs(ahrs.pitch_sensor - plane.nav_pitch_cd) > 100U*assist_angle)) {
+        if (!in_att_assist) {
+            in_att_assist = true;
+            gcs().send_text(MAV_SEVERITY_INFO, "Angle assist r=%d p=%d",
+                                         (int)(labs(ahrs.roll_sensor - plane.nav_roll_cd) /100),
+                                         (int)(labs(ahrs.pitch_sensor - plane.nav_pitch_cd)/100));
+        }
     }
-    bool ret = (now - angle_error_start_ms) >= 1000;
-    if (ret && !in_angle_assist) {
-        in_angle_assist = true;
-        gcs().send_text(MAV_SEVERITY_INFO, "Angle assist r=%d p=%d",
-                                         (int)(ahrs.roll_sensor/100),
-                                         (int)(ahrs.pitch_sensor/100));
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "Q_Catch Initiated");
-        plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
+    else{
+        in_att_assist = false;
     }
-    return ret;
+
+    if(in_att_assist || in_speed_assist || in_alt_assist){
+        
+        return true;
+    }  
+ 
+    return false;
 }
 
 /*
@@ -1550,14 +1521,18 @@ void QuadPlane::update_transition(void)
     /*
       see if we should provide some assistance
      */
-    if (have_airspeed &&
-        assistance_needed(aspeed) &&
+    if (assistance_needed() &&
         !is_tailsitter() &&
         hal.util->get_soft_armed() &&
         ((plane.auto_throttle_mode && !plane.throttle_suppressed) ||
          plane.get_throttle_input()>0 ||
          plane.is_flying())) {
         // the quad should provide some assistance to the plane
+        if(!hover_assist_timer_running && transition_state == TRANSITION_DONE){
+            hover_assist_timer = now;
+            hover_assist_timer_running = true;
+        }
+        assisted_flight = true;
         if (transition_state != TRANSITION_AIRSPEED_WAIT) {
             gcs().send_text(MAV_SEVERITY_INFO, "Transition started airspeed %.1f", (double)aspeed);
         }
@@ -1565,9 +1540,15 @@ void QuadPlane::update_transition(void)
         if (transition_start_ms == 0) {
             transition_start_ms = now;
         }
-        assisted_flight = true;
+        
     } else {
         assisted_flight = false;
+        hover_assist_timer_running = false;
+    }
+
+    if(hover_assist_timer_running && (now - hover_assist_timer)>(uint)assist_timeout*1000){
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover assist failed on timeout, LANDING!!");   
+        plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TAKEOFF);
     }
 
     if (is_tailsitter()) {
