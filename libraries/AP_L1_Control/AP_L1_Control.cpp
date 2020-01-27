@@ -38,13 +38,39 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FRAME("LIM_BANK",   3, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
 
-    // @Param: AUTO_LIM_BANK
+       // @Param: AUTO_LIM_BANK
     // @DisplayName:  Bank Angle for calculating turn in point in auto nav
     // @Description: Blank
     // @Units: deg
     // @Range: 0 89
     // @User: Advanced
     AP_GROUPINFO("A_BANK",   4, AP_L1_Control, _auto_bank_limit, 30.0f),
+    
+
+
+   // @Param: Ground_course correction_gain
+    // @DisplayName:  integral gain to account for wind speed measurement error
+    // @Description: Blank
+    // @Units: 1/s
+    // @Range: 0 89
+    // @User: Advanced
+    AP_GROUPINFO("GCC_GAIN", 5, AP_L1_Control, _gcc_gain, 20.0f),
+
+    // @Param: A
+	// @DisplayName: Maximum Roll Acceleration
+	// @Description: Maximum Acceleration of Roll rate for nav_rll (deg/s/s). 
+	// @Range: 1 1000
+	// @Increment: 1
+	// @User: User
+	AP_GROUPINFO("AMAX", 6, AP_L1_Control, _amax, 40),
+
+    // @Param: A
+	// @DisplayName: Maximum Roll Acceleration
+	// @Description: Maximum Acceleration of Roll rate for nav_rll (deg/s/s). 
+	// @Range: 1 1000
+	// @Increment: 1
+	// @User: User
+	AP_GROUPINFO("RMAX", 7, AP_L1_Control, _rmax, 20),
 
 
     AP_GROUPEND
@@ -85,12 +111,115 @@ float AP_L1_Control::get_yaw_sensor()
   return the bank angle needed to achieve tracking from the last
   update_*() operation
  */
-int32_t AP_L1_Control::nav_roll_cd(void) const
+int32_t AP_L1_Control::nav_roll_cd() const
 {
+   
     float ret;
     ret = cosf(_ahrs.pitch)*degrees(atanf(_latAccDem * 0.101972f) * 100.0f); // 0.101972 = 1/9.81
     ret = constrain_float(ret, -9000, 9000);
     return ret;
+}
+
+
+int32_t AP_L1_Control::nav_roll_cd_special() const
+{
+    
+
+    
+    float bank_angle = constrain_float(((_nav_angle_error+_gcc_integral_sum)/_theta),-1.0f,1.0f)* _auto_bank_limit;
+    
+
+    return (int32_t)(bank_angle*100.0);
+
+    
+}
+
+
+
+
+
+void AP_L1_Control::update_gcc_integrator(){
+
+ 
+    float ground_track_error = _nav_bearing - atan2f(_ahrs.groundspeed_vector().y,_ahrs.groundspeed_vector().x);
+
+    if(ground_track_error< -M_PI*2){
+        ground_track_error = ground_track_error + (M_PI*2);
+    }
+    if(ground_track_error>M_PI*2){
+        ground_track_error = ground_track_error - (M_PI*2);
+    }
+    if (ground_track_error>M_PI){
+        ground_track_error = ground_track_error-(2*M_PI);
+    }
+    if (ground_track_error<-M_PI){
+        ground_track_error = ground_track_error+(2*M_PI);
+    }
+
+    uint32_t now = AP_HAL::micros();
+    float dt = (now - _last_nav_angle_update_us) * 1.0e-6f;
+    _last_nav_angle_update_us = now;
+
+    if(abs(_nav_angle_error)<10*DEG_TO_RAD && dt<1.0f){
+        _gcc_integral_sum  = _gcc_integral_sum + (ground_track_error *(_gcc_gain/100.0f)*dt);
+    }
+    else{
+         _gcc_integral_sum = 0;
+    }
+}
+
+
+void AP_L1_Control::update_nav_angle_error(){
+
+    float bank_limit = DEG_TO_RAD*_auto_bank_limit;
+    float roll_rate = DEG_TO_RAD*_rmax; 
+    float roll_accel = DEG_TO_RAD*_amax;
+
+    _theta = (bank_limit/2)*((bank_limit/roll_rate)+(roll_rate/roll_accel));
+    
+    Vector2f target_ground_velocity =  Vector2f(cosf(_nav_bearing),sinf(_nav_bearing));
+    
+    Vector2f _windspeed_vector = Vector2f();
+    _windspeed_vector.x = _ahrs.wind_estimate().x;
+    _windspeed_vector.y = _ahrs.wind_estimate().y;
+
+    float airspeed = 0; // should set to trim airspeed
+    const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
+    if(!gotAirspeed){
+        airspeed = 28.0f; //need to make it a reference to trim speed
+    }
+
+
+    Vector2f targer_air_velocity = get_airspeed_from_wind_ground(_windspeed_vector,target_ground_velocity,airspeed);
+
+    
+
+    float target_heading = atan2f(targer_air_velocity.y,targer_air_velocity.x);
+
+   // Vector2f current_air_velocity= _ahrs.groundspeed_vector() - _windspeed_vector;
+
+    //float current_air_heading = atan2f(current_air_velocity.y,current_air_velocity.x);
+
+    float current_heading = _ahrs.get_yaw();
+
+    float angle_error2 =  target_heading - current_heading;
+    float angle_error = angle_error2;
+
+    if(angle_error< -M_PI*2){
+        angle_error = angle_error + (M_PI*2);
+    }
+    if(angle_error>M_PI*2){
+        angle_error = angle_error - (M_PI*2);
+    }
+    if (angle_error>M_PI){
+        angle_error = angle_error-(2*M_PI);
+    }
+    if (angle_error<-M_PI){
+        angle_error = angle_error+(2*M_PI);
+    }
+
+
+    _nav_angle_error = angle_error;
 }
 
 /*
@@ -176,13 +305,14 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
 
     if(alpha >  M_PI-(2*theta)){
         float turnRadius= sq(_ahrs.groundspeed_vector().length())/(10*tanf(bank_limit/2));
+        //turnRadius = alpha-(M_PI-(2*theta)) trying to add a scalar to compensate for the vehicle never reaching nav bank angle for these small turn angles
         returnValue =turnRadius/tanf(radians((180.0f-abs(RAD_TO_DEG* _airspeed_vector_1.angle(_airspeed_vector_2)))/2));
         
     }
     else{
 
     float turnInLength = ((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit))*(sinf(theta)+((2-cosf(theta))/(tanf(alpha/2))));
-    float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit))*(alpha-(2*theta));
+    float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit))*((alpha)-(2*theta));
     float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
     float turnTime = turnTimealphaPortion +turnTimeThetaPortion;
 
@@ -425,6 +555,8 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     //Limit Nu to +-(pi/2)
     Nu = constrain_float(Nu, -1.5708f, +1.5708f);
     _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+    // sure we can work out a better algorithm for this
+
 
     // Waypoint capture status is always false during waypoint following
     _WPcircle = false;
@@ -432,6 +564,10 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     _bearing_error = Nu; // bearing error angle (radians), +ve to left of track
 
     _data_is_stale = false; // status are correctly updated with current waypoint data
+
+    update_nav_angle_error();
+    update_gcc_integrator();
+
 }
 
 // update L1 control for loitering

@@ -17,6 +17,8 @@ public:
     // the target waypoint
     virtual int32_t nav_roll_cd(void) const = 0;
 
+    virtual int32_t nav_roll_cd_special(void) const = 0;
+
     // return the desired lateral acceleration in m/s/s to move towards
     // the target waypoint
     virtual float lateral_acceleration(void) const = 0;
