@@ -388,6 +388,21 @@ int32_t AP_Mission::get_next_ground_course_cd(int32_t default_angle)
     return _nav_cmd.content.location.get_bearing_to(cmd.content.location);
 }
 
+
+Location AP_Mission::get_next_location(Location defaultLocation){
+    Mission_Command cmd;
+    if (!get_next_nav_cmd(_nav_cmd.index+1, cmd)) {
+        return defaultLocation;
+    }
+    // special handling for nav commands with no target location
+    if (cmd.id == MAV_CMD_NAV_GUIDED_ENABLE ||
+        cmd.id == MAV_CMD_NAV_DELAY) {
+        return defaultLocation;
+    }
+
+    return cmd.content.location;
+}
+
 // set_current_cmd - jumps to command specified by index
 bool AP_Mission::set_current_cmd(uint16_t index)
 {
