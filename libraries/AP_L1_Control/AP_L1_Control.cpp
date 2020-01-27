@@ -145,6 +145,59 @@ float AP_L1_Control::turn_distance(float groundspeed, float turn_angle) const
 }
 
 
+float AP_L1_Control::turn_distance_special(const struct Location &prev_WP, const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel) const
+{
+    Vector2f _groundspeed_vector_1 = _ahrs.groundspeed_vector();
+    Vector2f _windspeed_vector = Vector2f();
+    _windspeed_vector.x = _ahrs.wind_estimate().x;
+    _windspeed_vector.y = _ahrs.wind_estimate().y;
+    Vector2f _airspeed_vector_1 = _groundspeed_vector_1 - _windspeed_vector;
+    Vector2f _groundheading_vector_2 = turn_WP.get_distance_NE(next_WP);
+    float airspeed = 0; // should set to trim airspeed
+    
+    const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
+    Vector2f _airspeed_vector_2 = get_airspeed_from_wind_ground(_windspeed_vector, _groundheading_vector_2, airspeed );
+
+
+    float theta = M_PI - _airspeed_vector_1.angle(_airspeed_vector_2);
+
+    float turnInRotation = (_auto_bank_limit/2)*((_auto_bank_limit/))
+
+    float turnInLength = ((5*sq(airspeed))/(6*GRAVITY_MSS*_auto_bank_limit))*(sin(theta))
+
+    Vector2f _I =_airspeed_vector_1.normalized*
+
+
+
+}
+
+Vector2f AP_L1_Control::get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, const float airspeed) const
+{
+    
+    Vector2f G = ground.normalized();
+    Vector2f WindInTrack = wind;
+    WindInTrack.project(ground);
+    bool flying_backwards = false;
+    if(WindInTrack.length()>airspeed){
+        flying_backwards = true;
+    }
+    Vector2f C = WindInTrack - wind;
+
+    float magC = C.length();
+
+    Vector2f A = Vector2f();
+
+    if(airspeed>magC){
+        A = G*sqrt( sq(airspeed)- sq(magC)) +C;
+    }
+    else{
+        A = -wind.normalized()*airspeed;
+    }
+    return A;
+
+
+}
+
 
 float AP_L1_Control::loiter_radius(const float radius) const
 {
