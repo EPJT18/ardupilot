@@ -154,23 +154,17 @@ int32_t AP_L1_Control::nav_roll_cd_special() const
     _windspeed_vector.y = _ahrs.wind_estimate().y;
     Vector2f targer_air_velocity = get_airspeed_from_wind_ground(_windspeed_vector,target_ground_velocity,airspeed);
 
+
+    float _groundspeed_heading_1 = atan2f(_ahrs.groundspeed_vector().y,_ahrs.groundspeed_vector().x);
+    float _ground_turn_angle = wrap_2PI(_nav_bearing-_groundspeed_heading_1+ M_PI)- M_PI;
+    float _airspeed_heading_2 = atan2f(targer_air_velocity.y,targer_air_velocity.x);
+    float _air_turn_angle = wrap_2PI(_airspeed_heading_2-_ahrs.get_yaw()+ M_PI)- M_PI;
     
-
-    float target_heading = atan2f(targer_air_velocity.y,targer_air_velocity.x);
-
-   // Vector2f current_air_velocity= _ahrs.groundspeed_vector() - _windspeed_vector;
-
-    //float current_air_heading = atan2f(current_air_velocity.y,current_air_velocity.x);
-
-    float current_heading = _ahrs.get_yaw();
-
-
-    float angle_error = wrap_2PI(target_heading - current_heading+M_PI) - M_PI; // a- floor(a/b)*b -M_PI;
-
-
-    float _nav_angle_error = angle_error;
+     if( _air_turn_angle*_ground_turn_angle<0 && abs(_ground_turn_angle)>M_PI_2 ){
+        _air_turn_angle +=   -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
+    }
     
-    float bank_angle = constrain_float(((_nav_angle_error+_gcc_integral_sum)/(theta)),-1.0f,1.0f)* _auto_bank_limit;
+    float bank_angle = constrain_float(((_air_turn_angle+_gcc_integral_sum)/(theta)),-1.0f,1.0f)* _auto_bank_limit;
     
 
     return (int32_t)(bank_angle*100.0);
