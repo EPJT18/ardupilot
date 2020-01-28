@@ -173,9 +173,9 @@ struct PACKED log_Precland {
     int32_t lng;
     int32_t rlat;
     int32_t rlng;
-    float meas_z;
-    float cov_x;
-    float cov_y;
+    float pos_x;
+    float pos_y;
+    float cov;
     uint32_t last_meas;
     uint32_t ekf_outcount;
     uint32_t lag;
@@ -190,12 +190,9 @@ void Plane::Log_Write_Precland()
         return;
     }
 
-    Vector3f target_pos_meas = Vector3f(0.0f,0.0f,0.0f);
     Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
-    g2.precland.get_target_position_relative_cm(target_pos_abs);
-    g2.precland.get_target_position_measurement_cm(target_pos_meas);
-    float x_cov = g2.precland.get_ekf_x_cov(); 
-    float y_cov = g2.precland.get_ekf_y_cov();
+    g2.precland.get_target_position_cm(target_pos_abs);
+    float cov = g2.precland.get_ekf_x_cov();
 
 
     // try to log pos in lat/long
@@ -211,9 +208,9 @@ void Plane::Log_Write_Precland()
         lng             : target_pos_gps.lng,
         rlat            : raw_target_pos_gps.lat,
         rlng            : raw_target_pos_gps.lng,
-        meas_z          : target_pos_meas.z,
-        cov_x           : x_cov,
-        cov_y           : y_cov,
+        pos_x           : target_pos_abs.x,
+        pos_y           : target_pos_abs.y,
+        cov             : cov,
         last_meas       : g2.precland.last_update_ms(),
         ekf_outcount    : g2.precland.ekf_outlier_count(),
         lag             : g2.precland.get_lag()
@@ -338,7 +335,7 @@ const struct LogStructure Plane::log_structure[] = {
       "AETR", "Qhhhhh",  "TimeUS,Ail,Elev,Thr,Rudd,Flap", "s-----", "F-----" },
 #if PRECISION_LANDING == ENABLED
     { LOG_PRECLAND_MSG, sizeof(log_Precland),
-      "PL",    "QBBLLLLfffIII",    "TimeUS,Heal,TAcq,lat,lng,rlat,rlng,mZ,covX,covY,LastUS,EKFO,Lag", "s--DUDUm--s-s","F--0000B00C-C" },
+      "PL",    "QBBLLLLfffIII",    "TimeUS,Heal,TAcq,lat,lng,rlat,rlng,pX,pY,cov,LastUS,EKFO,Lag", "s--DUDUmm-s-s","F--0000BB0C-C" },
 #endif
 };
 

@@ -558,10 +558,10 @@ void AC_PrecLand::run_output_prediction(Vector2f& target_pos_rel_out_NE, Vector2
     // Predict forward from delayed time horizon
     for (uint8_t i=1; i<_inertial_history->available(); i++) {
         const struct inertial_data_frame_s *inertial_data = (*_inertial_history)[i];
-        _target_vel_rel_out_NE.x -= inertial_data->correctedVehicleDeltaVelocityNED.x;
-        _target_vel_rel_out_NE.y -= inertial_data->correctedVehicleDeltaVelocityNED.y;
-        _target_pos_rel_out_NE.x += _target_vel_rel_out_NE.x * inertial_data->dt;
-        _target_pos_rel_out_NE.y += _target_vel_rel_out_NE.y * inertial_data->dt;
+        target_vel_rel_out_NE.x -= inertial_data->correctedVehicleDeltaVelocityNED.x;
+        target_vel_rel_out_NE.y -= inertial_data->correctedVehicleDeltaVelocityNED.y;
+        target_pos_rel_out_NE.x += target_vel_rel_out_NE.x * inertial_data->dt;
+        target_pos_rel_out_NE.y += target_vel_rel_out_NE.y * inertial_data->dt;
     }
 
     const AP_AHRS &_ahrs = AP::ahrs();
@@ -571,23 +571,23 @@ void AC_PrecLand::run_output_prediction(Vector2f& target_pos_rel_out_NE, Vector2
 
     // Apply position correction for CG offset from IMU
     Vector3f imu_pos_ned = Tbn * accel_body_offset;
-    _target_pos_rel_out_NE.x += imu_pos_ned.x;
-    _target_pos_rel_out_NE.y += imu_pos_ned.y;
+    target_pos_rel_out_NE.x += imu_pos_ned.x;
+    target_pos_rel_out_NE.y += imu_pos_ned.y;
 
     // Apply position correction for body-frame horizontal camera offset from CG, so that vehicle lands lens-to-target
     Vector3f cam_pos_horizontal_ned = Tbn * Vector3f(_cam_offset.get().x, _cam_offset.get().y, 0);
-    _target_pos_rel_out_NE.x -= cam_pos_horizontal_ned.x;
-    _target_pos_rel_out_NE.y -= cam_pos_horizontal_ned.y;
+    target_pos_rel_out_NE.x -= cam_pos_horizontal_ned.x;
+    target_pos_rel_out_NE.y -= cam_pos_horizontal_ned.y;
 
     // Apply velocity correction for IMU offset from CG
     Vector3f vel_ned_rel_imu = Tbn * (_ahrs.get_gyro() % (-accel_body_offset));
-    _target_vel_rel_out_NE.x -= vel_ned_rel_imu.x;
-    _target_vel_rel_out_NE.y -= vel_ned_rel_imu.y;
+    target_vel_rel_out_NE.x -= vel_ned_rel_imu.x;
+    target_vel_rel_out_NE.y -= vel_ned_rel_imu.y;
 
     // Apply land offset
     Vector3f land_ofs_ned_m = _ahrs.get_rotation_body_to_ned() * Vector3f(_land_ofs_cm_x,_land_ofs_cm_y,0) * 0.01f;
-    _target_pos_rel_out_NE.x += land_ofs_ned_m.x;
-    _target_pos_rel_out_NE.y += land_ofs_ned_m.y;
+    target_pos_rel_out_NE.x += land_ofs_ned_m.x;
+    target_pos_rel_out_NE.y += land_ofs_ned_m.y;
 }
 
 bool AC_PrecLand::timeout(void){
