@@ -266,8 +266,6 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
     _windspeed_vector.y = _ahrs.wind_estimate().y;
     _groundspeed_vector_1 = _groundspeed_vector_1.normalized()*_ahrs.groundspeed();
 
-
-
     Vector2f _airspeed_vector_1 = _groundspeed_vector_1 - _windspeed_vector;
     Vector2f _groundspeed_vector_2 = turn_WP.get_distance_NE(next_WP);
     float airspeed = 0; // should set to trim airspeed
@@ -277,102 +275,61 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
         airspeed = 28.0f; //need to make it a reference to trim speed
     }
 
-
-
     Vector2f _airspeed_vector_2 = get_airspeed_from_wind_ground(_windspeed_vector, _groundspeed_vector_2, airspeed );
 
     float bank_limit = DEG_TO_RAD*_auto_bank_limit;
     float roll_rate = DEG_TO_RAD*roll_rate_deg;
     float roll_accel = DEG_TO_RAD*roll_accel_deg;
 
-
-    float alpha = M_PI- _airspeed_vector_1.angle(_airspeed_vector_2);
-    
-
     //catches case where we have to turn more than 180 degrees in air frame
  
     float _groundspeed_heading_1 = atan2f(_groundspeed_vector_1.y,_groundspeed_vector_1.x);
     float _groundspeed_heading_2 = atan2f(_groundspeed_vector_2.y,_groundspeed_vector_2.x);
     float _ground_turn_angle = wrap_2PI(_groundspeed_heading_2-_groundspeed_heading_1+ M_PI)- M_PI;
-
-
     float _airspeed_heading_1 = atan2f(_airspeed_vector_1.y,_airspeed_vector_1.x);
     float _airspeed_heading_2 = atan2f(_airspeed_vector_2.y,_airspeed_vector_2.x);
     float _air_turn_angle = wrap_2PI(_airspeed_heading_2-_airspeed_heading_1+ M_PI)- M_PI;
 
     if( _air_turn_angle*_ground_turn_angle<0 ){
         _air_turn_angle +=   -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
-
-    }
-
-    if(abs((M_PI-alpha)-abs(_air_turn_angle))>1.0f){
-        _air_turn_angle = (M_PI-alpha);
-    }
-
- 
-    //prevent divide by zero
-    if(abs(alpha)<0.05f){
-        alpha = 0.05f;
     }
 
     float theta = _turn_rate_correction_factor*(bank_limit/2)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));//check this, seems too big
 
-    float returnValue =0.0f;
-
-
-    if(alpha >  M_PI-(2*theta)){
+    if(abs(_air_turn_angle) <  2*theta){
         float turnRadius= sq(_ahrs.groundspeed_vector().length())/(GRAVITY_MSS*tanf(bank_limit/2));
-        //turnRadius = alpha-(M_PI-(2*theta)) trying to add a scalar to compensate for the vehicle never reaching nav bank angle for these small turn angles
-        returnValue =turnRadius/tanf(radians((180.0f-abs(RAD_TO_DEG* _airspeed_vector_1.angle(_airspeed_vector_2)))/2));
-        
+        return turnRadius/tanf(radians((180.0f-abs(RAD_TO_DEG* _airspeed_vector_1.angle(_airspeed_vector_2)))/2));  
     }
-    else{
-        Vector2f _airspeed_vector_1_normalized = _airspeed_vector_1.normalized();
-        Vector2f perp_airspeed_vector_1 = Vector2f();
-        perp_airspeed_vector_1.x = -_airspeed_vector_1_normalized.y;
-        perp_airspeed_vector_1.y = _airspeed_vector_1_normalized.x;
-        if(_air_turn_angle<0.0f){
-            perp_airspeed_vector_1 = -perp_airspeed_vector_1;
-        }
     
-        
-        float beta = abs(_air_turn_angle);
-        Vector2f turnDistanceXY = ( (perp_airspeed_vector_1* (2- cosf(theta) + cosf(beta-theta) -(2*cosf(beta)))) + (_airspeed_vector_1_normalized*(sinf(theta)-sinf(beta-theta)+(2*sinf(beta)))) );
-        turnDistanceXY = turnDistanceXY*((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor));
-    
-       //float turnInLength = ((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor))*(sinf(theta)+((2-cosf(theta))/(tanf(alpha/2))));
-       //Vector2f turnDistanceXYCheck =_airspeed_vector_1.normalized()*turnInLength + _airspeed_vector_2.normalized()*turnInLength  ;
-    
-
-        ///delete later, just check the function works;
-        //if(abs(turnDistanceXY.x-turnDistanceXYCheck.x)>1.0f || abs(turnDistanceXY.y-turnDistanceXYCheck.y)>1.0f){
-        //    turnDistanceXYCheck = turnDistanceXY;
-        //}
-
-
-        float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor))*(abs(_air_turn_angle)-(2*theta));
-        float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
-        float turnTime = turnTimealphaPortion +turnTimeThetaPortion;
-
-        turnDistanceXY = turnDistanceXY+ (_windspeed_vector*turnTime);
-
-        Vector2f turnDistanceParallel = turnDistanceXY;
-        turnDistanceParallel =   _groundspeed_vector_1 * (turnDistanceParallel *  _groundspeed_vector_1)/( _groundspeed_vector_1* _groundspeed_vector_1);     
-
-        Vector2f turnDistancePerpendicular = turnDistanceXY -turnDistanceParallel;
-
-        Vector2f _groundDistance_2 = _groundspeed_vector_2.normalized()*(turnDistancePerpendicular.length()/sinf(_groundspeed_vector_1.angle(_groundspeed_vector_2)));
-
-        Vector2f _groundDistance_1 = turnDistanceXY - _groundDistance_2;
-
-        returnValue =_groundDistance_1.length();
+    Vector2f _airspeed_vector_1_normalized = _airspeed_vector_1.normalized();
+    Vector2f perp_airspeed_vector_1 = Vector2f();
+    perp_airspeed_vector_1.x = -_airspeed_vector_1_normalized.y;
+    perp_airspeed_vector_1.y = _airspeed_vector_1_normalized.x;
+    if(_air_turn_angle<0.0f){
+        perp_airspeed_vector_1 = -perp_airspeed_vector_1;
     }
+          
+    float beta = abs(_air_turn_angle);
+    Vector2f turnDistanceXY = ( (perp_airspeed_vector_1* (2- cosf(theta) + cosf(beta-theta) -(2*cosf(beta)))) + (_airspeed_vector_1_normalized*(sinf(theta)-sinf(beta-theta)+(2*sinf(beta)))) );
+    turnDistanceXY = turnDistanceXY*((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor));
 
 
-    return returnValue; 
+    float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor))*(abs(_air_turn_angle)-(2*theta));
+    float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
+    float turnTime = turnTimealphaPortion +turnTimeThetaPortion;
 
+    turnDistanceXY = turnDistanceXY+ (_windspeed_vector*turnTime);
 
+    Vector2f turnDistanceParallel = turnDistanceXY;
+    turnDistanceParallel =   _groundspeed_vector_1 * (turnDistanceParallel *  _groundspeed_vector_1)/( _groundspeed_vector_1* _groundspeed_vector_1);     
 
+    Vector2f turnDistancePerpendicular = turnDistanceXY -turnDistanceParallel;
+
+    Vector2f _groundDistance_2 = _groundspeed_vector_2.normalized()*(turnDistancePerpendicular.length()/sinf(_groundspeed_vector_1.angle(_groundspeed_vector_2)));
+
+    Vector2f _groundDistance_1 = turnDistanceXY - _groundDistance_2;
+
+    return _groundDistance_1.length();
 
 }
 
