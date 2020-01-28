@@ -54,8 +54,7 @@ public:
     float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel) const override;
     Vector2f get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, float airspeed) const;
     void update_gcc_integrator(void);
-    void update_nav_angle_error(void);
-    void update_nav_roll_smoothing(void);
+
     float loiter_radius (const float loiter_radius) const override;
     void update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min = 0.0f) override;
     void update_loiter(const struct Location &center_WP, float radius, int8_t loiter_direction) override;
@@ -118,9 +117,9 @@ private:
 
     float _gcc_integral_sum = 0;
 
-    float _nav_angle_error ;
+    //float _nav_angle_error ;
 
-    float _theta;
+    //float _theta;
 
     float _unsmoothed_bank_angle_cd;
 
@@ -146,6 +145,7 @@ private:
     AP_Float _gcc_gain;
     AP_Float _amax;
     AP_Float _rmax;
+    AP_Float _turn_rate_correction_factor;
     float _L1_xtrack_i_gain_prev = 0;
 
     uint32_t _last_update_waypoint_us;

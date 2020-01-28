@@ -73,6 +73,17 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
 	AP_GROUPINFO("RMAX", 7, AP_L1_Control, _rmax, 20),
 
 
+    // @Param: Turn Rate correction factor
+	// @DisplayName: Maximum Roll Acceleration
+	// @Description: Maximum Acceleration of Roll rate for nav_rll (deg/s/s). 
+	// @Range: 1 1000
+	// @Increment: 1
+	// @User: User
+	AP_GROUPINFO("TRCF", 8, AP_L1_Control, _turn_rate_correction_factor,0.625),
+
+
+
+
     AP_GROUPEND
 };
 
@@ -124,9 +135,42 @@ int32_t AP_L1_Control::nav_roll_cd() const
 int32_t AP_L1_Control::nav_roll_cd_special() const
 {
     
+    float bank_limit = DEG_TO_RAD*_auto_bank_limit;
+    float roll_rate = DEG_TO_RAD*_rmax; 
+    float roll_accel = DEG_TO_RAD*_amax;
+
+    float airspeed = 0; // should set to trim airspeed
+    const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
+
+    if(!gotAirspeed){
+        airspeed = 28.0f; //need to make it a reference to trim speed
+    }
+
+    float theta = (bank_limit/2)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));
+    Vector2f target_ground_velocity =  Vector2f(cosf(_nav_bearing),sinf(_nav_bearing));
+    
+    Vector2f _windspeed_vector = Vector2f();
+    _windspeed_vector.x = _ahrs.wind_estimate().x;
+    _windspeed_vector.y = _ahrs.wind_estimate().y;
+    Vector2f targer_air_velocity = get_airspeed_from_wind_ground(_windspeed_vector,target_ground_velocity,airspeed);
 
     
-    float bank_angle = constrain_float(((_nav_angle_error+_gcc_integral_sum)/_theta),-1.0f,1.0f)* _auto_bank_limit;
+
+    float target_heading = atan2f(targer_air_velocity.y,targer_air_velocity.x);
+
+   // Vector2f current_air_velocity= _ahrs.groundspeed_vector() - _windspeed_vector;
+
+    //float current_air_heading = atan2f(current_air_velocity.y,current_air_velocity.x);
+
+    float current_heading = _ahrs.get_yaw();
+
+
+    float angle_error = wrap_2PI(target_heading - current_heading+M_PI) - M_PI; // a- floor(a/b)*b -M_PI;
+
+
+    float _nav_angle_error = angle_error;
+    
+    float bank_angle = constrain_float(((_nav_angle_error+_gcc_integral_sum)/(theta)),-1.0f,1.0f)* _auto_bank_limit;
     
 
     return (int32_t)(bank_angle*100.0);
@@ -143,24 +187,15 @@ void AP_L1_Control::update_gcc_integrator(){
  
     float ground_track_error = _nav_bearing - atan2f(_ahrs.groundspeed_vector().y,_ahrs.groundspeed_vector().x);
 
-    if(ground_track_error< -M_PI*2){
-        ground_track_error = ground_track_error + (M_PI*2);
-    }
-    if(ground_track_error>M_PI*2){
-        ground_track_error = ground_track_error - (M_PI*2);
-    }
-    if (ground_track_error>M_PI){
-        ground_track_error = ground_track_error-(2*M_PI);
-    }
-    if (ground_track_error<-M_PI){
-        ground_track_error = ground_track_error+(2*M_PI);
-    }
+    ground_track_error =  wrap_2PI(ground_track_error+M_PI)-M_PI;
+
+ 
 
     uint32_t now = AP_HAL::micros();
     float dt = (now - _last_nav_angle_update_us) * 1.0e-6f;
     _last_nav_angle_update_us = now;
 
-    if(abs(_nav_angle_error)<10*DEG_TO_RAD && dt<1.0f){
+    if(abs(ground_track_error)<12*DEG_TO_RAD && dt<1.0f){
         _gcc_integral_sum  = _gcc_integral_sum + (ground_track_error *(_gcc_gain/100.0f)*dt);
     }
     else{
@@ -169,58 +204,6 @@ void AP_L1_Control::update_gcc_integrator(){
 }
 
 
-void AP_L1_Control::update_nav_angle_error(){
-
-    float bank_limit = DEG_TO_RAD*_auto_bank_limit;
-    float roll_rate = DEG_TO_RAD*_rmax; 
-    float roll_accel = DEG_TO_RAD*_amax;
-
-    _theta = (bank_limit/2)*((bank_limit/roll_rate)+(roll_rate/roll_accel));
-    
-    Vector2f target_ground_velocity =  Vector2f(cosf(_nav_bearing),sinf(_nav_bearing));
-    
-    Vector2f _windspeed_vector = Vector2f();
-    _windspeed_vector.x = _ahrs.wind_estimate().x;
-    _windspeed_vector.y = _ahrs.wind_estimate().y;
-
-    float airspeed = 0; // should set to trim airspeed
-    const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
-    if(!gotAirspeed){
-        airspeed = 28.0f; //need to make it a reference to trim speed
-    }
-
-
-    Vector2f targer_air_velocity = get_airspeed_from_wind_ground(_windspeed_vector,target_ground_velocity,airspeed);
-
-    
-
-    float target_heading = atan2f(targer_air_velocity.y,targer_air_velocity.x);
-
-   // Vector2f current_air_velocity= _ahrs.groundspeed_vector() - _windspeed_vector;
-
-    //float current_air_heading = atan2f(current_air_velocity.y,current_air_velocity.x);
-
-    float current_heading = _ahrs.get_yaw();
-
-    float angle_error2 =  target_heading - current_heading;
-    float angle_error = angle_error2;
-
-    if(angle_error< -M_PI*2){
-        angle_error = angle_error + (M_PI*2);
-    }
-    if(angle_error>M_PI*2){
-        angle_error = angle_error - (M_PI*2);
-    }
-    if (angle_error>M_PI){
-        angle_error = angle_error-(2*M_PI);
-    }
-    if (angle_error<-M_PI){
-        angle_error = angle_error+(2*M_PI);
-    }
-
-
-    _nav_angle_error = angle_error;
-}
 
 /*
   return the lateral acceleration needed to achieve tracking from the last
@@ -281,6 +264,10 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
     Vector2f _windspeed_vector = Vector2f();
     _windspeed_vector.x = _ahrs.wind_estimate().x;
     _windspeed_vector.y = _ahrs.wind_estimate().y;
+    _groundspeed_vector_1 = _groundspeed_vector_1.normalized()*_ahrs.groundspeed();
+
+
+
     Vector2f _airspeed_vector_1 = _groundspeed_vector_1 - _windspeed_vector;
     Vector2f _groundspeed_vector_2 = turn_WP.get_distance_NE(next_WP);
     float airspeed = 0; // should set to trim airspeed
@@ -290,6 +277,8 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
         airspeed = 28.0f; //need to make it a reference to trim speed
     }
 
+
+
     Vector2f _airspeed_vector_2 = get_airspeed_from_wind_ground(_windspeed_vector, _groundspeed_vector_2, airspeed );
 
     float bank_limit = DEG_TO_RAD*_auto_bank_limit;
@@ -298,41 +287,87 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
 
 
     float alpha = M_PI- _airspeed_vector_1.angle(_airspeed_vector_2);
+    
 
-    float theta = (bank_limit/2)*((bank_limit/roll_rate)+(roll_rate/roll_accel));
+    //catches case where we have to turn more than 180 degrees in air frame
+ 
+    float _groundspeed_heading_1 = atan2f(_groundspeed_vector_1.y,_groundspeed_vector_1.x);
+    float _groundspeed_heading_2 = atan2f(_groundspeed_vector_2.y,_groundspeed_vector_2.x);
+    float _ground_turn_angle = wrap_2PI(_groundspeed_heading_2-_groundspeed_heading_1+ M_PI)- M_PI;
+
+
+    float _airspeed_heading_1 = atan2f(_airspeed_vector_1.y,_airspeed_vector_1.x);
+    float _airspeed_heading_2 = atan2f(_airspeed_vector_2.y,_airspeed_vector_2.x);
+    float _air_turn_angle = wrap_2PI(_airspeed_heading_2-_airspeed_heading_1+ M_PI)- M_PI;
+
+    if( _air_turn_angle*_ground_turn_angle<0 ){
+        _air_turn_angle +=   -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
+
+    }
+
+    if(abs((M_PI-alpha)-abs(_air_turn_angle))>1.0f){
+        _air_turn_angle = (M_PI-alpha);
+    }
+
+ 
+    //prevent divide by zero
+    if(abs(alpha)<0.05f){
+        alpha = 0.05f;
+    }
+
+    float theta = _turn_rate_correction_factor*(bank_limit/2)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));//check this, seems too big
 
     float returnValue =0.0f;
 
+
     if(alpha >  M_PI-(2*theta)){
-        float turnRadius= sq(_ahrs.groundspeed_vector().length())/(10*tanf(bank_limit/2));
+        float turnRadius= sq(_ahrs.groundspeed_vector().length())/(GRAVITY_MSS*tanf(bank_limit/2));
         //turnRadius = alpha-(M_PI-(2*theta)) trying to add a scalar to compensate for the vehicle never reaching nav bank angle for these small turn angles
         returnValue =turnRadius/tanf(radians((180.0f-abs(RAD_TO_DEG* _airspeed_vector_1.angle(_airspeed_vector_2)))/2));
         
     }
     else{
+        Vector2f _airspeed_vector_1_normalized = _airspeed_vector_1.normalized();
+        Vector2f perp_airspeed_vector_1 = Vector2f();
+        perp_airspeed_vector_1.x = -_airspeed_vector_1_normalized.y;
+        perp_airspeed_vector_1.y = _airspeed_vector_1_normalized.x;
+        if(_air_turn_angle<0.0f){
+            perp_airspeed_vector_1 = -perp_airspeed_vector_1;
+        }
+    
+        
+        float beta = abs(_air_turn_angle);
+        Vector2f turnDistanceXY = ( (perp_airspeed_vector_1* (2- cosf(theta) + cosf(beta-theta) -(2*cosf(beta)))) + (_airspeed_vector_1_normalized*(sinf(theta)-sinf(beta-theta)+(2*sinf(beta)))) );
+        turnDistanceXY = turnDistanceXY*((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor));
+    
+       //float turnInLength = ((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor))*(sinf(theta)+((2-cosf(theta))/(tanf(alpha/2))));
+       //Vector2f turnDistanceXYCheck =_airspeed_vector_1.normalized()*turnInLength + _airspeed_vector_2.normalized()*turnInLength  ;
+    
 
-    float turnInLength = ((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit))*(sinf(theta)+((2-cosf(theta))/(tanf(alpha/2))));
-    float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit))*((alpha)-(2*theta));
-    float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
-    float turnTime = turnTimealphaPortion +turnTimeThetaPortion;
+        ///delete later, just check the function works;
+        //if(abs(turnDistanceXY.x-turnDistanceXYCheck.x)>1.0f || abs(turnDistanceXY.y-turnDistanceXYCheck.y)>1.0f){
+        //    turnDistanceXYCheck = turnDistanceXY;
+        //}
 
-    Vector2f turnDistanceXY =_airspeed_vector_1.normalized()*turnInLength + _airspeed_vector_2.normalized()*turnInLength + _windspeed_vector*turnTime;
 
-    Vector2f turnDistanceParallel = turnDistanceXY;
-     turnDistanceParallel.project(_groundspeed_vector_1);
+        float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor))*(abs(_air_turn_angle)-(2*theta));
+        float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
+        float turnTime = turnTimealphaPortion +turnTimeThetaPortion;
 
-    Vector2f turnDistancePerpendicular = turnDistanceXY -turnDistanceParallel;
+        turnDistanceXY = turnDistanceXY+ (_windspeed_vector*turnTime);
 
-    Vector2f _groundDistance_2 = _groundspeed_vector_2.normalized()*(turnDistancePerpendicular.length()/sinf(_groundspeed_vector_1.angle(_groundspeed_vector_2)));
+        Vector2f turnDistanceParallel = turnDistanceXY;
+        turnDistanceParallel =   _groundspeed_vector_1 * (turnDistanceParallel *  _groundspeed_vector_1)/( _groundspeed_vector_1* _groundspeed_vector_1);     
 
-    Vector2f _groundDistance_1 = turnDistanceXY - _groundDistance_2;
+        Vector2f turnDistancePerpendicular = turnDistanceXY -turnDistanceParallel;
 
-    returnValue =_groundDistance_1.length();
+        Vector2f _groundDistance_2 = _groundspeed_vector_2.normalized()*(turnDistancePerpendicular.length()/sinf(_groundspeed_vector_1.angle(_groundspeed_vector_2)));
+
+        Vector2f _groundDistance_1 = turnDistanceXY - _groundDistance_2;
+
+        returnValue =_groundDistance_1.length();
     }
 
-    if(returnValue>300.0f){
-        return returnValue; 
-    }
 
     return returnValue; 
 
@@ -346,7 +381,7 @@ Vector2f AP_L1_Control::get_airspeed_from_wind_ground(const Vector2f wind, const
     
     Vector2f G = ground.normalized();
     Vector2f WindInTrack = wind;
-    WindInTrack.project(ground);
+    WindInTrack = ground * (WindInTrack * ground)/(ground*ground);       
     /*bool flying_backwards = false;
     if(WindInTrack.length()>airspeed){
         flying_backwards = true;
@@ -565,7 +600,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     _data_is_stale = false; // status are correctly updated with current waypoint data
 
-    update_nav_angle_error();
+
     update_gcc_integrator();
 
 }
