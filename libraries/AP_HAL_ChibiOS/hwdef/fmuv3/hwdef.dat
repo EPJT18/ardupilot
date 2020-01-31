@@ -252,8 +252,8 @@ PB2 BOOT1 INPUT
 PB3 FMU_SW0 INPUT
 
 # This defines the pins for the 2nd CAN interface, if available.
-PB6 CAN2_TX CAN2
-PB12 CAN2_RX CAN2
+# PB6 CAN2_TX CAN2
+# PB12 CAN2_RX CAN2
 
 # Now the first I2C bus. The pin speeds are automatically setup
 # correctly, but can be overridden here if needed.

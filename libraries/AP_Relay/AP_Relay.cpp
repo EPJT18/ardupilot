@@ -50,7 +50,7 @@ const AP_Param::GroupInfo AP_Relay::var_info[] = {
     // @DisplayName: First Relay Pin
     // @Description: Digital pin number for first relay control. This is the pin used for camera control.
     // @User: Standard
-    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,80:CAN2_TX,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5
     AP_GROUPINFO("PIN",  0, AP_Relay, _pin[0], RELAY1_PIN_DEFAULT),
 
     // @Param: PIN2

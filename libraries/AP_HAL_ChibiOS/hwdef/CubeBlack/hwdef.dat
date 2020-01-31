@@ -69,3 +69,9 @@ PA8 nVDD_5V_PERIPH_EN OUTPUT HIGH
 # means sensors off, then it is pulled HIGH in peripheral_power_enable()
 undef PE3
 PE3 VDD_3V3_SENSORS_EN OUTPUT LOW
+
+# Overrides CAN2 Definition to be camera input and output
+undef PB6
+undef PB12 
+PB6 CAM_OUT OUTPUT LOW GPIO(80)
+PB12 CAM_IN INPUT PULLUP GPIO(81)
