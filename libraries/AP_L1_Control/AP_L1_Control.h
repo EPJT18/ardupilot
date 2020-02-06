@@ -36,7 +36,7 @@ public:
     /* see AP_Navigation.h for the definitions and units of these
      * functions */
     int32_t nav_roll_cd(void) const override;
-    int32_t nav_roll_cd_special(void) const override;
+    int32_t nav_roll_cd_special(void) override;
     float lateral_acceleration(void) const override;
 
     // return the desired track heading angle(centi-degrees)
@@ -61,6 +61,11 @@ public:
     void update_heading_hold(int32_t navigation_heading_cd) override;
     void update_level_flight(void) override;
     bool reached_loiter_target(void) override;
+    
+    bool initial_turn_complete(void) override;
+
+    void start_new_turn(void) override;
+
 
     // set the default NAVL1_PERIOD
     void set_default_period(float period) {
@@ -105,7 +110,7 @@ private:
     // bearing angle (radians) to L1 point
     float _nav_bearing;
 
-    
+    bool _initial_turn_complete;
 
     float _nav_bearing_special;
 

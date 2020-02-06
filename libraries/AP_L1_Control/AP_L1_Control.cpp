@@ -107,6 +107,14 @@ float AP_L1_Control::get_yaw()
     return _ahrs.yaw;
 }
 
+void AP_L1_Control::start_new_turn(void){
+    _initial_turn_complete = false;
+}
+
+bool AP_L1_Control::initial_turn_complete(void){
+    return _initial_turn_complete;
+}
+
 /*
   Wrap AHRS yaw sensor if in reverse - centi-degress
  */
@@ -132,7 +140,7 @@ int32_t AP_L1_Control::nav_roll_cd() const
 }
 
 
-int32_t AP_L1_Control::nav_roll_cd_special() const
+int32_t AP_L1_Control::nav_roll_cd_special() 
 {
     
     float bank_limit = DEG_TO_RAD*_auto_bank_limit;
@@ -163,9 +171,13 @@ int32_t AP_L1_Control::nav_roll_cd_special() const
      if( _air_turn_angle*_ground_turn_angle<0 && abs(_ground_turn_angle)>M_PI_2 ){
         _air_turn_angle +=   -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
     }
+     if(abs(_air_turn_angle/theta)<0.25 && !_initial_turn_complete && !_data_is_stale){
+        _initial_turn_complete = true;
+    }
     
     float bank_angle = constrain_float(((_air_turn_angle+_gcc_integral_sum)/(theta)),-1.0f,1.0f)* _auto_bank_limit;
     
+
 
     return (int32_t)(bank_angle*100.0);
 

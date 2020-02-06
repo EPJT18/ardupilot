@@ -44,11 +44,10 @@ void Plane::adjust_altitude_target()
         // once we reach a loiter target then lock to the final
         // altitude target
         set_target_altitude_location(next_WP_loc);
-    } else if (target_altitude.offset_cm != 0 && 
-               !current_loc.past_interval_finish_line(prev_WP_loc, next_WP_loc)) {
+    } else if (!current_loc.past_interval_finish_line(prev_WP_loc, next_WP_loc)) {
         // control climb/descent rate
-        set_target_altitude_proportion(next_WP_loc, 1.0f-auto_state.wp_proportion);
-
+        //set_target_altitude_proportion(next_WP_loc, 1.0f-auto_state.wp_proportion);
+        set_target_altitude_special();
         // stay within the range of the start and end locations in altitude
         constrain_target_altitude_location(next_WP_loc, prev_WP_loc);
     } else {
@@ -105,6 +104,14 @@ void Plane::setup_glide_slope(void)
         reset_offset_altitude();
         break;
     }
+}
+
+void Plane::setup_glide_slope_special(float _turn_in_distance)
+{
+    auto_state.turn_in_distance = _turn_in_distance;
+    auto_state.glide_slope_started = true;
+    turn_end_loc =  current_loc;
+
 }
 
 /*
@@ -295,6 +302,23 @@ void Plane::set_target_altitude_proportion(const Location &loc, float proportion
                 target_altitude.offset_cm = ((float)target_altitude.offset_cm)/proportion;
         }
     }
+}
+
+void Plane::set_target_altitude_special(void){
+    if(auto_state.glide_slope_started){
+        set_target_altitude_location(next_WP_loc);
+
+        float difference_in_height = next_WP_loc.alt-turn_end_loc.alt;
+        float distance_between_points = next_WP_loc.get_distance(turn_end_loc)-auto_state.turn_in_distance;
+        float distance_to_go = current_loc.get_distance(next_WP_loc) - auto_state.turn_in_distance;
+        if (distance_between_points<1.0f){
+            distance_between_points = 1.0f;
+        }
+        float percentThere = constrain_float(distance_to_go/distance_between_points, 0.0f, 1.0f);
+        change_target_altitude(-(difference_in_height*percentThere));   
+    }
+    
+    
 }
 
 /*

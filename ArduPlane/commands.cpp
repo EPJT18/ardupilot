@@ -62,7 +62,11 @@ void Plane::set_next_WP(const struct Location &loc)
     // zero out our loiter vals to watch for missed waypoints
     loiter_angle_reset();
 
-    setup_glide_slope();
+
+    //setup_glide_slope(); HERE
+    auto_state.glide_slope_started = false;
+    nav_controller->start_new_turn();
+    set_target_altitude_current();//Here again
     setup_turn_angle();
 }
 

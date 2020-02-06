@@ -654,6 +654,14 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
        
     } 
+
+    if (!auto_state.glide_slope_started && nav_controller->initial_turn_complete()){
+        setup_glide_slope_special(acceptance_distance_m);
+
+    }
+
+
+
     
     if (auto_state.wp_distance <= acceptance_distance_m) {
         gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
