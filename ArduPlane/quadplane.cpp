@@ -498,9 +498,14 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("BL_F_TH_MIN", 24, QuadPlane, bl_fwd_throttle_min_percent, 8),
 
-    AP_GROUPINFO("H_ASSIST_EN", 25, QuadPlane, assist_enable, 0),
+    AP_GROUPINFO("H_A_STRIKES", 25, QuadPlane, assist_strikes, 3),
 
     AP_GROUPINFO("H_A_TIMEOUT", 26, QuadPlane, assist_timeout, 15),
+
+    AP_GROUPINFO("H_A_RETRY", 27, QuadPlane, assist_retry_timeout, 15),
+
+
+
 
     AP_GROUPEND
 };
@@ -756,6 +761,7 @@ bool QuadPlane::setup(void)
     }
 
     transition_state = TRANSITION_DONE;
+    transition_from_stationary = true;
 
     if (tilt.tilt_mask != 0) {
         // setup tilt compensation
@@ -1426,13 +1432,6 @@ float QuadPlane::desired_auto_yaw_rate_cds(void) const
  */
 bool QuadPlane::assistance_needed()
 {
-    if (assist_enable <= 0) {
-        // assistance disabled
-        in_angle_assist = false;
-        in_speed_assist = false;
-        in_att_assist = false;
-        return false;
-    }
 
     float aspeed;
     bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
@@ -1492,6 +1491,7 @@ void QuadPlane::update_transition(void)
         }
         transition_state = TRANSITION_DONE;
         transition_start_ms = 0;
+        assist_strike_counter = 0;
         transition_low_airspeed_ms = 0;
         assisted_flight = false;
         return;
@@ -1502,12 +1502,25 @@ void QuadPlane::update_transition(void)
     if (!hal.util->get_soft_armed()) {
         // reset the failure timer if we haven't started transitioning
         transition_start_ms = now;
-    } else if ((transition_state != TRANSITION_DONE) &&
-        (transition_start_ms != 0) &&
-        (transition_failure > 0) &&
-        ((now - transition_start_ms) > ((uint32_t)transition_failure * 1000))) {
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "Transition failed, exceeded time limit");
-        plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
+
+
+    } 
+
+    else if ((transition_state != TRANSITION_DONE) && (transition_start_ms != 0)){
+        if( transition_failure > 0 && transition_from_stationary  && ((now - transition_start_ms) > ((uint32_t)transition_failure * 1000))){
+        
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "Transition failed, exceeded time limit");
+            plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
+        }
+        else if (assist_timeout >0 && !transition_from_stationary &&((now - transition_start_ms) > ((uint32_t)assist_timeout * 1000))){
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, exceeded time limit");
+            plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
+        }
+        else if (assist_strikes >0 and assist_strike_counter>= assist_strikes -1){
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, too many attempts");
+            plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TRANSITION);
+        }
+
     }
 
     float aspeed;
@@ -1528,10 +1541,7 @@ void QuadPlane::update_transition(void)
          plane.get_throttle_input()>0 ||
          plane.is_flying())) {
         // the quad should provide some assistance to the plane
-        if(!hover_assist_timer_running && transition_state == TRANSITION_DONE){
-            hover_assist_timer = now;
-            hover_assist_timer_running = true;
-        }
+        
         assisted_flight = true;
         if (transition_state != TRANSITION_AIRSPEED_WAIT) {
             gcs().send_text(MAV_SEVERITY_INFO, "Transition started airspeed %.1f", (double)aspeed);
@@ -1539,23 +1549,31 @@ void QuadPlane::update_transition(void)
         transition_state = TRANSITION_AIRSPEED_WAIT;
         if (transition_start_ms == 0) {
             transition_start_ms = now;
+            if(transition_low_airspeed_ms!=0){
+                assist_strike_counter++;
+            }
+            //if it it less than reset timer seconds since you were last in an assist mode, add one to the counter
+            
         }
         
     } else {
         assisted_flight = false;
-        hover_assist_timer_running = false;
+        
     }
 
-    if(hover_assist_timer_running && (now - hover_assist_timer)>(uint)assist_timeout*1000){
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover assist failed on timeout, LANDING!!");   
-        plane.set_mode(plane.mode_qland, MODE_REASON_VTOL_FAILED_TAKEOFF);
+   
+    if(transition_low_airspeed_ms!=0 && now-transition_low_airspeed_ms > (uint32_t)assist_retry_timeout*1000 ){
+        transition_low_airspeed_ms = 0;
+        assist_strike_counter = 0;
     }
+
 
     if (is_tailsitter()) {
         if (transition_state == TRANSITION_ANGLE_WAIT_FW &&
             tailsitter_transition_fw_complete()) {
             gcs().send_text(MAV_SEVERITY_INFO, "Transition FW done");
             transition_state = TRANSITION_DONE;
+            transition_from_stationary = false;
             transition_start_ms = 0;
             transition_low_airspeed_ms = 0;
         }
@@ -1566,6 +1584,7 @@ void QuadPlane::update_transition(void)
     // the tilt will decrease rapidly)
     if (tiltrotor_fully_fwd() && transition_state != TRANSITION_AIRSPEED_WAIT) {
         transition_state = TRANSITION_DONE;
+        transition_from_stationary = false;
         transition_start_ms = 0;
         transition_low_airspeed_ms = 0;
     }
@@ -1651,9 +1670,13 @@ void QuadPlane::update_transition(void)
         const uint32_t transition_timer_ms = now - transition_low_airspeed_ms;
         if (transition_timer_ms > (unsigned)transition_time_ms) {
             transition_state = TRANSITION_DONE;
+            transition_from_stationary = false;
             transition_start_ms = 0;
-            transition_low_airspeed_ms = 0;
+            if (assist_retry_timeout ==0){
+                transition_low_airspeed_ms = 0;
+            }
             gcs().send_text(MAV_SEVERITY_INFO, "Transition done");
+            break;
         }
         float trans_time_ms = (float)transition_time_ms.get();
         float transition_scale = (trans_time_ms - transition_timer_ms) / trans_time_ms;
@@ -1798,7 +1821,9 @@ void QuadPlane::update(void)
               setup the transition state appropriately for next time we go into a non-VTOL mode
             */
             transition_start_ms = 0;
+            transition_from_stationary = true;
             transition_low_airspeed_ms = 0;
+            assist_strike_counter = 0;
             if (throttle_wait && !plane.is_flying()) {
                 transition_state = TRANSITION_DONE;
             } else if (is_tailsitter()) {

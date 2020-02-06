@@ -286,11 +286,11 @@ private:
 
     // altitude to trigger assistance
     AP_Int16 assist_alt;
-    AP_Int16 assist_enable;
+    AP_Int16 assist_strikes;
     AP_Int16 assist_timeout;
-    uint32_t alt_error_start_ms;
-    uint32_t hover_assist_timer;
-    bool hover_assist_timer_running;
+    AP_Int16 assist_retry_timeout;
+
+    
     bool in_alt_assist;
     bool in_att_assist;
     bool in_speed_assist;
@@ -374,6 +374,9 @@ private:
     uint32_t transition_start_ms;
     uint32_t transition_low_airspeed_ms;
 
+    uint8_t assist_strike_counter;
+
+
     Location last_auto_target;
 
     // last throttle value when active
@@ -413,6 +416,8 @@ private:
 
     // are we in a guided takeoff?
     bool guided_takeoff:1;
+
+    bool transition_from_stationary:1;
     
     struct {
         // time when motors reached lower limit
