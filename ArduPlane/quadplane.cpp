@@ -2388,6 +2388,8 @@ void QuadPlane::vtol_position_controller(void)
         pos_control->set_desired_accel_xy(0.0f,0.0f);
 
         // set position control target and update
+        // in SITL, this will cause the plane to relax if the descend rate is too high 
+        // due to motors appearing at lower limit
         if (should_relax()) {
             loiter_nav->soften_for_landing();
         } else {

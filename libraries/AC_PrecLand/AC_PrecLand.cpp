@@ -320,7 +320,7 @@ Location AC_PrecLand::get_target_est_loc(void){
     
     get_target_position_relative_cm(target_pos_abs);
 
-    // ofset relative target position from absolute vehicle position
+    // offset relative target position from absolute vehicle position
     current_loc.offset(target_pos_abs.x*0.01, target_pos_abs.y*0.01);
     return current_loc;
 }
