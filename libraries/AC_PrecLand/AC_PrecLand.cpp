@@ -599,3 +599,10 @@ bool AC_PrecLand::timeout(void){
         return false;
     }
 }
+
+bool AC_PrecLand::backed_initialised(void){
+    if (_backend != nullptr){
+        return true;
+    }
+    return false;
+}

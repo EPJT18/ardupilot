@@ -186,7 +186,7 @@ void Plane::Log_Write_Precland()
 {
  #if PRECISION_LANDING == ENABLED
     // exit immediately if not enabled
-    if (!g2.precland.enabled()) {
+    if (!g2.precland.enabled() | !g2.precland.backed_initialised()) {
         return;
     }
 

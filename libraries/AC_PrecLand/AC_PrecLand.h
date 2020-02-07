@@ -127,6 +127,9 @@ public:
     // landing timeout
     bool timeout(void);
 
+    // backend initialised
+    bool backed_initialised(void);
+
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
 
