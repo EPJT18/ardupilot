@@ -66,7 +66,7 @@ void Plane::set_next_WP(const struct Location &loc)
     //setup_glide_slope(); HERE
     auto_state.glide_slope_started = false;
     nav_controller->start_new_turn();
-    set_target_altitude_current();//Here again
+    set_target_altitude_location(prev_WP_loc);
     setup_turn_angle();
 }
 

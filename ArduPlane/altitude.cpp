@@ -306,11 +306,12 @@ void Plane::set_target_altitude_proportion(const Location &loc, float proportion
 
 void Plane::set_target_altitude_special(void){
     if(auto_state.glide_slope_started){
+        float early_climb_distance = 2* airspeed.get_airspeed();
         set_target_altitude_location(next_WP_loc);
 
         float difference_in_height = next_WP_loc.alt-turn_end_loc.alt;
-        float distance_between_points = next_WP_loc.get_distance(turn_end_loc)-auto_state.turn_in_distance;
-        float distance_to_go = current_loc.get_distance(next_WP_loc) - auto_state.turn_in_distance;
+        float distance_between_points = next_WP_loc.get_distance(turn_end_loc)-auto_state.turn_in_distance-early_climb_distance;
+        float distance_to_go = current_loc.get_distance(next_WP_loc) - auto_state.turn_in_distance-early_climb_distance;
         if (distance_between_points<1.0f){
             distance_between_points = 1.0f;
         }
