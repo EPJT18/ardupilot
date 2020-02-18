@@ -63,9 +63,7 @@ public:
     bool reached_loiter_target(void) override;
     
     bool initial_turn_complete(void) override;
-
     void start_new_turn(void) override;
-
 
     // set the default NAVL1_PERIOD
     void set_default_period(float period) {
@@ -152,7 +150,6 @@ private:
     AP_Float _rmax;
     AP_Float _turn_rate_correction_factor;
     float _L1_xtrack_i_gain_prev = 0;
-
     uint32_t _last_update_waypoint_us;
     uint32_t _last_nav_angle_update_us;
     int32_t previous_roll_cd;
@@ -161,7 +158,6 @@ private:
 
     AP_Float _loiter_bank_limit;
     
-
     bool _reverse = false;
     float get_yaw();
     float get_yaw_sensor();

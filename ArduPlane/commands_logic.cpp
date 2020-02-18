@@ -647,21 +647,16 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         acceptance_distance_m = cmd_acceptance_distance;
     } 
 
-    else if ( distance_between_waypoints>WP_RADIUS_DEFAULT ) {
-        acceptance_distance_m = nav_controller->turn_distance_special( plane.current_loc,  cmd.content.location, mission.get_next_location(cmd.content.location),rollController.gains.rmax,rollController.gains.amax );
+    else if (distance_between_waypoints>WP_RADIUS_DEFAULT) {
+        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax);
     }
     else if (cmd_passby == 0) {
         acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
-       
     } 
 
     if (!auto_state.glide_slope_started && nav_controller->initial_turn_complete()){
         setup_glide_slope_special(acceptance_distance_m);
-
     }
-
-
-
     
     if (auto_state.wp_distance <= acceptance_distance_m) {
         gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
