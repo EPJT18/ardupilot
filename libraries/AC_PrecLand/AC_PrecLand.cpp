@@ -132,6 +132,26 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("TACQ_TOUT", 12, AC_PrecLand, _tacq_timeout, 5),
 
+    // @Param: DESCEND_SPEED_MIN
+    // @DisplayName: Precland minimum descend speed
+    // @Description: Will not descend below this speed if performing precision landing
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+
+    AP_GROUPINFO("DN_SPD_MIN", 13, AC_PrecLand, _land_speed_min_cms, 50),
+
+    // @Param: LAND_ACCEPTABLE_ERROR
+    // @DisplayName: Acceptable pos error
+    // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+
+    AP_GROUPINFO("MAX_POS_ERR", 14, AC_PrecLand, _acceptable_error_cm, 100),
+
     AP_GROUPEND
 };
 
@@ -245,15 +265,6 @@ bool AC_PrecLand::target_acquired()
 {
     _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < (uint8_t)_tacq_timeout.get()*1000;
     return _target_acquired;
-}
-
-bool AC_PrecLand::abort_if_not_confident()
-{
-    if (_enabled == 1){
-        return true;
-    }else{
-        return false;
-    }
 }
 
 uint32_t AC_PrecLand::get_lag(){
