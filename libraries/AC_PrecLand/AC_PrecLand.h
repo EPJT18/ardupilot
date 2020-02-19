@@ -36,14 +36,6 @@ public:
         PRECLAND_BEHAVIOR_CAUTIOUS
     };
 
-    // precision landing WP-programmed behaviours
-    enum PrecLandWPBehaviour {
-        PRECLAND_INACTIVE = 0,
-        PRECLAND_ABORT_CONTINUE_MISSION,
-        PRECLAND_CONTINUE_GPS_GUIDANCE,
-        PRECLAND_ABORT_CONTINGENCY_LAND
-    };
-
     // types of precision landing (used for PRECLAND_TYPE parameter)
     enum PrecLandType {
         PRECLAND_TYPE_NONE = 0,

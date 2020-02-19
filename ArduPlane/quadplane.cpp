@@ -2369,7 +2369,6 @@ void QuadPlane::vtol_position_controller(void)
     }
 
     case QPOS_POSITION2:
-        // TODO: timer here so that we can handle a precland timeout
     case QPOS_LAND_DESCEND:
         /*
           for final land repositioning and descent we run the position controller
@@ -2386,15 +2385,13 @@ void QuadPlane::vtol_position_controller(void)
         pos_control->set_desired_accel_xy(0.0f,0.0f);
 
         // set position control target and update
-        // in SITL, this will cause the plane to relax if the descend rate is too high 
+        // note: in SITL, this will cause the plane to relax if the descend rate is too high 
         // due to motors appearing at lower limit
         if (should_relax()) {
             loiter_nav->soften_for_landing();
         } else {
 
 #if PRECISION_LANDING == ENABLED
-
-
             AC_PrecLand &precland = plane.g2.precland;
             Vector2f target_pos, target_vel_rel;
             
@@ -2817,7 +2814,7 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
     }
    
     vtol_takeoff_yaw_error = yaw_error;
-    if(!(options & OPTION_LEVEL_TRANSITION) || abs(yaw_error)<500){
+    if(!(options & OPTION_YAW_BEFORE_TRANSTION) || abs(yaw_error)<500){
         
         transition_state = is_tailsitter() ? TRANSITION_ANGLE_WAIT_FW : TRANSITION_AIRSPEED_WAIT;
         plane.TECS_controller.set_pitch_max_limit(transition_pitch_max);
@@ -3054,7 +3051,7 @@ bool QuadPlane::verify_vtol_land(void)
 #if PRECISION_LANDING == ENABLED
     AC_PrecLand &precland = plane.g2.precland;
 
-    // local boolean controls if precland is used, class attribute controls if it is run at all
+    // WP p1 controls if precland is used, class attribute controls if it is run at all
     bool precland_enabled = precland.enabled();
     bool precland_descend = false;
 
@@ -3099,8 +3096,6 @@ bool QuadPlane::verify_vtol_land(void)
     bool precland_enabled = false;
     bool precland_descend = false;
 #endif
-
-// TODO: Timeout
 
     if (!check_hover_motors_spinning()&&in_vtol_land_approach()){
         plane.set_mode(plane.mode_loiter, MODE_REASON_VTOL_FAILED_TRANSITION);
