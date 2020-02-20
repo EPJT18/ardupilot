@@ -580,7 +580,7 @@ void Plane::calc_nav_pitch()
  */
 void Plane::calc_nav_roll()
 {
-    int32_t commanded_roll = nav_controller->nav_roll_cd_special();
+    int32_t commanded_roll = nav_controller->nav_roll_cd_special(plane.rollController.gains.amax, plane.rollController.gains.rmax, TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min);
 
     // Received an external msg that guides roll in the last 3 seconds?
     if ((control_mode == &mode_guided || control_mode == &mode_avoidADSB) &&
@@ -636,15 +636,6 @@ void Plane::update_nav_roll_smoothing(void)
     nav_roll_cd = previous_roll_cd + ((nav_roll_rate*timeSinceLast)/1000);
     nav_roll_cd = constrain_int32(nav_roll_cd, -roll_limit_cd, roll_limit_cd);
     
-    AP::logger().Write("NAVD", "TimeUS,RLLO,RLLR,RLLD,SD,RLLP,TSL", "QfffffI",
-                                        AP_HAL::micros64(),
-                                        (double)nav_roll_cd*0.01f,
-                                        (double)nav_roll_rate*0.01f,
-                                        (double)current_roll_demand*0.01f,
-                                        (double)stoppingDistance*0.01f,
-                                        (double)previous_roll_cd*0.01f,
-                                        timeSinceLast
-                                        );
 }
 
 int8_t Plane::sgn(int32_t x){

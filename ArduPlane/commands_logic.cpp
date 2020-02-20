@@ -648,7 +648,7 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
     } 
 
     else if (distance_between_waypoints>WP_RADIUS_DEFAULT) {
-        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax);
+        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax,TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min );
     }
     else if (cmd_passby == 0) {
         acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);

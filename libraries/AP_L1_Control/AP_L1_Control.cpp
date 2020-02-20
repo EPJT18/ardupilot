@@ -44,7 +44,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Units: deg
     // @Range: 0 89
     // @User: Advanced
-    AP_GROUPINFO("A_BANK",   4, AP_L1_Control, _auto_bank_limit, 30.0f),
+    AP_GROUPINFO("AUTO_BANK",   4, AP_L1_Control, _auto_bank_limit, 30.0f),
 
    // @Param: Ground_course correction_gain
     // @DisplayName:  integral gain to account for wind speed measurement error
@@ -60,7 +60,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
 	// @Range: 1 1000
 	// @Increment: 1
 	// @User: User
-	AP_GROUPINFO("AMAX", 6, AP_L1_Control, _amax, 40),
+	//AP_GROUPINFO("AMAX", 6, AP_L1_Control, _amax, 40),
 
     // @Param: A
 	// @DisplayName: Maximum Roll Acceleration
@@ -68,12 +68,12 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
 	// @Range: 1 1000
 	// @Increment: 1
 	// @User: User
-	AP_GROUPINFO("RMAX", 7, AP_L1_Control, _rmax, 20),
+	//AP_GROUPINFO("RMAX", 7, AP_L1_Control, _rmax, 20),
 
     // @Param: Turn Rate correction factor
 	// @DisplayName: Maximum Roll Acceleration
 	// @Description: Maximum Acceleration of Roll rate for nav_rll (deg/s/s). 
-	// @Range: 1 1000
+	// @Range: 0.1 2
 	// @Increment: 1
 	// @User: User
 	AP_GROUPINFO("TRCF", 8, AP_L1_Control, _turn_rate_correction_factor,0.625),
@@ -147,18 +147,18 @@ int32_t AP_L1_Control::nav_roll_cd() const
 
     The first and last stages are symmetrical and therefore cover the same amount of distance in the air frame
  */
-int32_t AP_L1_Control::nav_roll_cd_special() 
+int32_t AP_L1_Control::nav_roll_cd_special(float _amax, float _rmax, float _trimspeed, float _minspeed) 
 {
     
     float bank_limit = DEG_TO_RAD*_auto_bank_limit;
     float roll_rate = DEG_TO_RAD*_rmax; 
     float roll_accel = DEG_TO_RAD*_amax;
 
-    float airspeed = 0; // should set to trim airspeed
+    float airspeed = 0; 
     const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
 
-    if(!gotAirspeed){
-        airspeed = 28.0f; //need to make it a reference to trim speed
+    if(!gotAirspeed || airspeed <  _minspeed){
+        airspeed = _trimspeed; //need to make it a reference to trim speed
     }
 
     // theta is the heading change between straight flight and full commanded bank angle
@@ -257,6 +257,9 @@ float AP_L1_Control::turn_distance(float wp_radius) const
  */
 float AP_L1_Control::turn_distance(float groundspeed, float turn_angle) const
 {
+    if (turn_angle < 0.1){
+        return 1.0f; // avoid tan(90)
+    }
     float turn_radius = groundspeed*groundspeed/(10*tanf(radians(_auto_bank_limit)));
     float turn_distance = turn_radius/tanf(radians((180.0f-abs(turn_angle))*0.5f));
     return turn_distance;
@@ -271,20 +274,20 @@ float AP_L1_Control::turn_distance(float groundspeed, float turn_angle) const
         - ground velocity frame
         - air velocity frame
 */
-float AP_L1_Control::turn_distance_special( const struct Location &current_loc, const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate_deg, const float roll_accel_deg) const
+float AP_L1_Control::turn_distance_special( const struct Location &current_loc, const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate_deg, const float roll_accel_deg, float _trimspeed, float _minspeed) const
 {
    
-    Vector2f _groundspeed_vector_1 = current_loc.get_distance_NE(turn_WP) ;
+    Vector2f _groundspeed_vector_1 = current_loc.get_distance_NE(turn_WP).normalized()*_ahrs.groundspeed();
     Vector2f _windspeed_vector = Vector2f(_ahrs.wind_estimate().x, _ahrs.wind_estimate().y);
-    _groundspeed_vector_1 = _groundspeed_vector_1.normalized()*_ahrs.groundspeed();
+   
 
     Vector2f _airspeed_vector_1 = _groundspeed_vector_1 - _windspeed_vector;
     Vector2f _groundspeed_vector_2 = turn_WP.get_distance_NE(next_WP);
     
     float airspeed = 0; // should set to trim airspeed
     const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
-    if(!gotAirspeed){
-        airspeed = 28.0f; //need to make it a reference to trim speed
+     if(!gotAirspeed || airspeed <  _minspeed){
+        airspeed = _trimspeed; //need to make it a reference to trim speed
     }
 
     Vector2f _airspeed_vector_2 = get_airspeed_from_wind_ground(_windspeed_vector, _groundspeed_vector_2, airspeed);
@@ -307,7 +310,7 @@ float AP_L1_Control::turn_distance_special( const struct Location &current_loc, 
         _air_turn_angle += -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
     }
 
-    float theta = _turn_rate_correction_factor*(bank_limit*0.5f)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));//check this, seems too big
+    float theta = _turn_rate_correction_factor*(bank_limit*0.5f)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));
 
     // If there is no constant roll portion of the turn
     if(abs(_air_turn_angle) <  2*theta){
@@ -468,7 +471,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     // Calculate time varying control parameters
     // Calculate the L1 length required for specified period
     // 0.3183099 = 1/1/pipi
-    _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+    _L1_dist =  MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
 
     // Calculate the NE position of WP B relative to WP A
     Vector2f AB = prev_WP.get_distance_NE(next_WP);

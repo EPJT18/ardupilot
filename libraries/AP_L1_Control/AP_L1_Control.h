@@ -36,7 +36,7 @@ public:
     /* see AP_Navigation.h for the definitions and units of these
      * functions */
     int32_t nav_roll_cd(void) const override;
-    int32_t nav_roll_cd_special(void) override;
+    int32_t nav_roll_cd_special(float _amax, float _rmax, float _trimspeed, float _minspeed) override;
     float lateral_acceleration(void) const override;
 
     // return the desired track heading angle(centi-degrees)
@@ -51,7 +51,7 @@ public:
     int32_t target_bearing_cd(void) const override;
     float turn_distance(float wp_radius) const override;
     float turn_distance(float groundspeed, float turn_angle) const override;
-    float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel) const override;
+    float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel, float _trimspeed, float _minspeed) const override;
     Vector2f get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, float airspeed) const;
     void update_gcc_integrator(void);
 
@@ -146,8 +146,8 @@ private:
     AP_Float _L1_xtrack_i_gain;
     AP_Float _auto_bank_limit;
     AP_Float _gcc_gain;
-    AP_Float _amax;
-    AP_Float _rmax;
+    //AP_Float _amax;
+    //AP_Float _rmax;
     AP_Float _turn_rate_correction_factor;
     float _L1_xtrack_i_gain_prev = 0;
     uint32_t _last_update_waypoint_us;
