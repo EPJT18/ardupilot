@@ -1362,6 +1362,8 @@ struct PACKED log_Arm_Disarm {
       "TRIG", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--DUmmmddd", "F--GGBBBBBB" }, \
     { LOG_ARSP_MSG, sizeof(log_AIRSPEED), "ARSP",  ARSP_FMT, ARSP_LABELS, ARSP_UNITS, ARSP_MULTS }, \
     { LOG_ASP2_MSG, sizeof(log_AIRSPEED), "ASP2",  ARSP_FMT, ARSP_LABELS, ARSP_UNITS, ARSP_MULTS }, \
+    { LOG_ASP3_MSG, sizeof(log_AIRSPEED), "ASP3",  ARSP_FMT, ARSP_LABELS, ARSP_UNITS, ARSP_MULTS }, \
+    { LOG_ASP4_MSG, sizeof(log_AIRSPEED), "ASP4",  ARSP_FMT, ARSP_LABELS, ARSP_UNITS, ARSP_MULTS }, \
     { LOG_CURRENT_MSG, sizeof(log_Current), \
       "BAT", CURR_FMT,CURR_LABELS,CURR_UNITS,CURR_MULTS },  \
     { LOG_CURRENT2_MSG, sizeof(log_Current), \
@@ -1378,8 +1380,6 @@ struct PACKED log_Arm_Disarm {
       "BAT7", CURR_FMT,CURR_LABELS,CURR_UNITS,CURR_MULTS }, \
     { LOG_CURRENT8_MSG, sizeof(log_Current), \
       "BAT8", CURR_FMT,CURR_LABELS,CURR_UNITS,CURR_MULTS }, \
-    { LOG_CURRENT9_MSG, sizeof(log_Current), \
-      "BAT9", CURR_FMT,CURR_LABELS,CURR_UNITS,CURR_MULTS }, \
     { LOG_CURRENT_CELLS_MSG, sizeof(log_Current_Cells), \
       "BCL", CURR_CELL_FMT, CURR_CELL_LABELS, CURR_CELL_UNITS, CURR_CELL_MULTS }, \
     { LOG_CURRENT_CELLS2_MSG, sizeof(log_Current_Cells), \
@@ -1396,8 +1396,6 @@ struct PACKED log_Arm_Disarm {
       "BCL7", CURR_CELL_FMT, CURR_CELL_LABELS, CURR_CELL_UNITS, CURR_CELL_MULTS }, \
     { LOG_CURRENT_CELLS8_MSG, sizeof(log_Current_Cells), \
       "BCL8", CURR_CELL_FMT, CURR_CELL_LABELS, CURR_CELL_UNITS, CURR_CELL_MULTS }, \
-    { LOG_CURRENT_CELLS9_MSG, sizeof(log_Current_Cells), \
-      "BCL9", CURR_CELL_FMT, CURR_CELL_LABELS, CURR_CELL_UNITS, CURR_CELL_MULTS }, \
 	{ LOG_ATTITUDE_MSG, sizeof(log_Attitude),\
       "ATT", "QccccCCCC", "TimeUS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw,ErrRP,ErrYaw", "sddddhhdh", "FBBBBBBBB" }, \
     { LOG_COMPASS_MSG, sizeof(log_Compass), \
@@ -1719,7 +1717,7 @@ enum LogMessages : uint8_t {
     LOG_CURRENT6_MSG,
     LOG_CURRENT7_MSG,
     LOG_CURRENT8_MSG,
-    LOG_CURRENT9_MSG,
+    
     LOG_CURRENT_CELLS_MSG,
     LOG_CURRENT_CELLS2_MSG,
     LOG_CURRENT_CELLS3_MSG,
@@ -1728,7 +1726,7 @@ enum LogMessages : uint8_t {
     LOG_CURRENT_CELLS6_MSG,
     LOG_CURRENT_CELLS7_MSG,
     LOG_CURRENT_CELLS8_MSG,
-    LOG_CURRENT_CELLS9_MSG,
+    
     LOG_COMPASS_MSG,
     LOG_COMPASS2_MSG,
     LOG_COMPASS3_MSG,
@@ -1790,6 +1788,8 @@ enum LogMessages : uint8_t {
     LOG_ISBH_MSG,
     LOG_ISBD_MSG,
     LOG_ASP2_MSG,
+    LOG_ASP3_MSG,
+    LOG_ASP4_MSG,
     LOG_PERFORMANCE_MSG,
     LOG_OPTFLOW_MSG,
     LOG_EVENT_MSG,
