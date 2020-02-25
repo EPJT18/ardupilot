@@ -17,7 +17,7 @@ public:
     // the target waypoint
     virtual int32_t nav_roll_cd(void) const = 0;
 
-    virtual int32_t nav_roll_cd_special(void) const = 0;
+    virtual int32_t nav_roll_cd_special(void) = 0;
 
     // return the desired lateral acceleration in m/s/s to move towards
     // the target waypoint
@@ -119,6 +119,10 @@ public:
     virtual bool data_is_stale(void) const = 0;
 
     virtual void set_reverse(bool reverse) = 0;
+
+    virtual bool initial_turn_complete(void) = 0;
+
+    virtual void start_new_turn(void) = 0;
 
     // add new navigation controllers to this enum. Users can then
     // select which navigation controller to use by setting the

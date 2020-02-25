@@ -468,6 +468,8 @@ private:
         // proportion to next waypoint
         float wp_proportion;
         
+        bool glide_slope_started;
+
         // last time is_flying() returned true in milliseconds
         uint32_t last_flying_ms;
 
@@ -521,6 +523,7 @@ private:
 
         // how much correction have we added for terrain data
         float terrain_correction;
+        float turn_in_distance;
     } auto_state;
 
     struct {
@@ -704,6 +707,8 @@ private:
     // The location of the current/active waypoint.  Used for altitude ramp, track following and loiter calculations.
     Location next_WP_loc {};
 
+    Location turn_end_loc {};
+
     // The location of the active waypoint in Guided mode.
     struct Location guided_WP_loc {};
 
@@ -808,8 +813,10 @@ private:
     void convert_mixers(void);
     void adjust_altitude_target();
     void setup_glide_slope(void);
+    void setup_glide_slope_special(float turn_in_distance);
     int32_t get_RTL_altitude();
     float relative_ground_altitude(bool use_rangefinder_if_available);
+    void set_target_altitude_special(void);
     void set_target_altitude_current(void);
     void set_target_altitude_current_adjusted(void);
     void set_target_altitude_location(const Location &loc);
