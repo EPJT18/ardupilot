@@ -17,6 +17,8 @@ public:
     // the target waypoint
     virtual int32_t nav_roll_cd(void) const = 0;
 
+    virtual int32_t nav_roll_cd_special(void) const = 0;
+
     // return the desired lateral acceleration in m/s/s to move towards
     // the target waypoint
     virtual float lateral_acceleration(void) const = 0;
@@ -55,6 +57,8 @@ public:
     // to allow the vehicle to neatly move to the next track in the
     // mission when approaching a waypoint
     virtual float turn_distance(float wp_radius, float turn_angle) const = 0;
+
+    virtual float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel) const =0;
 
     // return the target loiter radius for the current location that
     // will not cause excessive airframe loading
