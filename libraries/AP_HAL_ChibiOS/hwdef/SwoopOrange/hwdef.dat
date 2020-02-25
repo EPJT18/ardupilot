@@ -1,0 +1,9 @@
+
+include ../CubeOrange/hwdef.dat
+
+USB_STRING_PRODUCT "SwoopOrange"
+
+DMA_NOSHARE USART2* SPI1* SPI4* USART6*
+
+
+
