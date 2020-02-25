@@ -580,6 +580,23 @@ void Plane::calc_nav_pitch()
  */
 void Plane::calc_nav_roll()
 {
+    int32_t commanded_roll = nav_controller->nav_roll_cd();  
+
+    // Received an external msg that guides roll in the last 3 seconds?
+    if ((control_mode == &mode_guided || control_mode == &mode_avoidADSB) &&
+            plane.guided_state.last_forced_rpy_ms.x > 0 &&
+            millis() - plane.guided_state.last_forced_rpy_ms.x < 3000) {
+        commanded_roll = plane.guided_state.forced_rpy_cd.x;
+    }
+
+    nav_roll_cd = constrain_int32(commanded_roll, -roll_limit_cd, roll_limit_cd);
+    update_load_factor();
+    update_nav_roll_smoothing();
+    previous_roll_cd = nav_roll_cd;
+}
+
+void Plane::calc_nav_roll_auto()
+{
     int32_t commanded_roll = nav_controller->nav_roll_cd_special(plane.rollController.gains.amax, plane.rollController.gains.rmax, TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min);
 
     // Received an external msg that guides roll in the last 3 seconds?
@@ -594,6 +611,8 @@ void Plane::calc_nav_roll()
     update_nav_roll_smoothing();
     previous_roll_cd = nav_roll_cd;
 }
+
+
 
 /*
   adjust nav_pitch_cd for STAB_PITCH_DOWN_CD. This is used to make

@@ -640,25 +640,26 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         }
         return false;
     }
-    float distance_between_waypoints = cmd.content.location.get_distance(mission.get_next_location(cmd.content.location));
+    //float distance_between_waypoints = cmd.content.location.get_distance(mission.get_next_location(cmd.content.location));
     float acceptance_distance_m = 0; // default to: if overflown - let it fly up to the point
     if (cmd_acceptance_distance > 0) {
         // allow user to override acceptance radius
         acceptance_distance_m = cmd_acceptance_distance;
     } 
 
-    else if (distance_between_waypoints>WP_RADIUS_DEFAULT) {
-        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax,TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min );
-    }
     else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
-    } 
+        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax,TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min, ahrs.roll );
+    }
+    
 
     if (!auto_state.glide_slope_started && nav_controller->initial_turn_complete()){
         setup_glide_slope_special(acceptance_distance_m);
     }
-    
-    if (auto_state.wp_distance <= acceptance_distance_m) {
+    const Vector2f vec1 = prev_WP_loc.get_distance_NE(flex_next_WP_loc);
+    const Vector2f vec2 = plane.current_loc.get_distance_NE(flex_next_WP_loc);
+    float  DistanceToGoAlongTrack = vec2*vec1/(vec1.length());
+
+    if (     DistanceToGoAlongTrack <= acceptance_distance_m) {
         gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
                           (unsigned)mission.get_current_nav_cmd().index,
                           (unsigned)current_loc.get_distance(flex_next_WP_loc));

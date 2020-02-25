@@ -58,7 +58,7 @@ public:
     // mission when approaching a waypoint
     virtual float turn_distance(float wp_radius, float turn_angle) const = 0;
 
-    virtual float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel, float _trimspeed, float _minspeed) const =0;
+    virtual float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel, float _trimspeed, float _minspeed, float current_roll) const = 0;
 
     // return the target loiter radius for the current location that
     // will not cause excessive airframe loading

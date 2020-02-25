@@ -971,6 +971,7 @@ private:
     bool in_preLaunch_flight_stage(void);
     void calc_throttle();
     void calc_nav_roll();
+    void calc_nav_roll_auto();
     void calc_nav_pitch();
     void update_flight_stage();
     void update_navigation();
