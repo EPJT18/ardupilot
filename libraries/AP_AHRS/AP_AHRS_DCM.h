@@ -187,7 +187,6 @@ private:
 
     // estimated wind in m/s
     Vector3f _wind;
-    
 
     float _imu1_weight;
 
