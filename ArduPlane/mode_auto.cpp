@@ -64,7 +64,7 @@ void ModeAuto::update()
         plane.takeoff_calc_pitch();
         plane.calc_throttle();
     } else if (nav_cmd_id == MAV_CMD_NAV_LAND) {
-        plane.calc_nav_roll();
+        plane.calc_nav_roll_auto();
         plane.calc_nav_pitch();
 
         // allow landing to restrict the roll limits
@@ -82,7 +82,7 @@ void ModeAuto::update()
         if (nav_cmd_id != MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT) {
             plane.steer_state.hold_course_cd = -1;
         }
-        plane.calc_nav_roll();
+        plane.calc_nav_roll_auto();
         plane.calc_nav_pitch();
         plane.calc_throttle();
     }

@@ -51,9 +51,8 @@ public:
     int32_t target_bearing_cd(void) const override;
     float turn_distance(float wp_radius) const override;
     float turn_distance(float groundspeed, float turn_angle) const override;
-    float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel, float _trimspeed, float _minspeed) const override;
+    float turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel, float _trimspeed, float _minspeed, float current_roll) const override;
     Vector2f get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, float airspeed) const;
-    void update_gcc_integrator(void);
 
     float loiter_radius (const float loiter_radius) const override;
     void update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min = 0.0f) override;
@@ -118,11 +117,6 @@ private:
     // crosstrack error in meters
     float _crosstrack_error;
 
-    float _gcc_integral_sum = 0;
-
-    //float _nav_angle_error ;
-
-    //float _theta;
 
     float _unsmoothed_bank_angle_cd;
 
@@ -145,13 +139,12 @@ private:
     float _L1_xtrack_i = 0;
     AP_Float _L1_xtrack_i_gain;
     AP_Float _auto_bank_limit;
-    AP_Float _gcc_gain;
-    //AP_Float _amax;
-    //AP_Float _rmax;
     AP_Float _turn_rate_correction_factor;
+    AP_Float _L1_Auto_Period;
     float _L1_xtrack_i_gain_prev = 0;
     uint32_t _last_update_waypoint_us;
     uint32_t _last_nav_angle_update_us;
+    uint32_t DebugTimer;
     int32_t previous_roll_cd;
     int32_t previous_roll_update_time;
     bool _data_is_stale = true;
