@@ -597,6 +597,9 @@ private:
     // Navigation control variables
     // The instantaneous desired bank angle.  Hundredths of a degree
     int32_t nav_roll_cd;
+    int32_t nav_roll_rate;
+    int32_t previous_roll_cd;
+    int32_t previous_roll_update_time;
 
     // The instantaneous desired pitch angle.  Hundredths of a degree
     int32_t nav_pitch_cd;
@@ -780,6 +783,8 @@ private:
 
     void adjust_nav_pitch_throttle(void);
     void update_load_factor(void);
+    void update_nav_roll_smoothing(void);
+    int8_t sgn(int32_t x);
     void send_fence_status(mavlink_channel_t chan);
     void send_servo_out(mavlink_channel_t chan);
     void send_wind(mavlink_channel_t chan);
