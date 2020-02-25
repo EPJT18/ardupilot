@@ -583,7 +583,7 @@ void Plane::calc_nav_roll()
     
    
     
-    int32_t commanded_roll = nav_controller->nav_roll_cd();
+    int32_t commanded_roll = nav_controller->nav_roll_cd_special();
 
     // Received an external msg that guides roll in the last 3 seconds?
     if ((control_mode == &mode_guided || control_mode == &mode_avoidADSB) &&

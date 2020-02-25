@@ -599,7 +599,7 @@ private:
     int32_t nav_roll_cd;
     int32_t nav_roll_rate;
     int32_t previous_roll_cd;
-    int32_t previous_roll_update_time;
+    uint32_t previous_roll_update_time;
 
     // The instantaneous desired pitch angle.  Hundredths of a degree
     int32_t nav_pitch_cd;

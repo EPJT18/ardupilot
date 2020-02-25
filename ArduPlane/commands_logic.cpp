@@ -640,16 +640,20 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         }
         return false;
     }
-
+    float distance_between_waypoints = cmd.content.location.get_distance(mission.get_next_location(cmd.content.location));
     float acceptance_distance_m = 0; // default to: if overflown - let it fly up to the point
     if (cmd_acceptance_distance > 0) {
         // allow user to override acceptance radius
         acceptance_distance_m = cmd_acceptance_distance;
-    } else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
-    } else {
+    } 
 
+    else if ( distance_between_waypoints>WP_RADIUS_DEFAULT ) {
+        acceptance_distance_m = nav_controller->turn_distance_special( plane.current_loc,  cmd.content.location, mission.get_next_location(cmd.content.location),rollController.gains.rmax,rollController.gains.amax );
     }
+    else if (cmd_passby == 0) {
+        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
+       
+    } 
     
     if (auto_state.wp_distance <= acceptance_distance_m) {
         gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
