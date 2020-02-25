@@ -287,7 +287,6 @@ private:
     AP_Int16 assist_strikes;
     AP_Int16 assist_timeout;
     AP_Int16 assist_retry_timeout;
-
     
     bool in_alt_assist;
     bool in_att_assist;
@@ -358,7 +357,6 @@ private:
     uint32_t transition_low_airspeed_ms;
 
     uint8_t assist_strike_counter;
-
 
     Location last_auto_target;
 

@@ -741,6 +741,7 @@ bool QuadPlane::setup(void)
     }
 
     transition_state = TRANSITION_DONE;
+    // enables a longer transition timeout as a takeoff transition is naturally longer than a hover assist transition
     transition_from_stationary = true;
 
     if (tilt.tilt_mask != 0) {
@@ -1416,6 +1417,7 @@ bool QuadPlane::assistance_needed()
     float aspeed;
     bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
 
+    // Check for speed assist
     if (have_airspeed && assist_speed > 0 && aspeed < assist_speed) {
         if (!in_speed_assist) {
             in_speed_assist = true;
@@ -1426,6 +1428,7 @@ bool QuadPlane::assistance_needed()
         in_speed_assist = false;
     }
     
+    // Check for altitude assist
     if (assist_alt > 0 && abs(plane.altitude_error_cm)>assist_alt*100) {
         if (!in_alt_assist) {
             in_alt_assist = true;
@@ -1436,6 +1439,7 @@ bool QuadPlane::assistance_needed()
         in_alt_assist = false;
     }
 
+    // Check for attitude assist
     if ((labs(ahrs.roll_sensor - plane.nav_roll_cd) > 100U*assist_angle || labs(ahrs.pitch_sensor - plane.nav_pitch_cd) > 100U*assist_angle)) {
         if (!in_att_assist) {
             in_att_assist = true;
@@ -1449,7 +1453,6 @@ bool QuadPlane::assistance_needed()
     }
 
     if(in_att_assist || in_speed_assist || in_alt_assist){
-        
         return true;
     }  
  
@@ -1482,20 +1485,20 @@ void QuadPlane::update_transition(void)
     if (!hal.util->get_soft_armed()) {
         // reset the failure timer if we haven't started transitioning
         transition_start_ms = now;
-
-
     } 
-
+    // Check the status of transition
     else if ((transition_state != TRANSITION_DONE) && (transition_start_ms != 0)){
-        if( transition_failure > 0 && transition_from_stationary  && ((now - transition_start_ms) > ((uint32_t)transition_failure * 1000))){
-        
+        // Takeoff transition timeout expired
+        if(transition_failure > 0 && transition_from_stationary  && ((now - transition_start_ms) > ((uint32_t)transition_failure * 1000))){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Transition failed, exceeded time limit");
             plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
         }
+        // Hover assist transition timeout expired
         else if (assist_timeout >0 && !transition_from_stationary &&((now - transition_start_ms) > ((uint32_t)assist_timeout * 1000))){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, exceeded time limit");
             plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
         }
+        // Too many related hover assist events have been requested
         else if (assist_strikes >0 and assist_strike_counter>= assist_strikes -1){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, too many attempts");
             plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
@@ -1533,20 +1536,16 @@ void QuadPlane::update_transition(void)
                 assist_strike_counter++;
             }
             //if it it less than reset timer seconds since you were last in an assist mode, add one to the counter
-            
         }
-        
     } else {
-        assisted_flight = false;
-        
+        assisted_flight = false; 
     }
-
    
+    // reset assist strike counter if retry timeout expires, any instances from now on are unrelated to prevous ones
     if(transition_low_airspeed_ms!=0 && now-transition_low_airspeed_ms > (uint32_t)assist_retry_timeout*1000 ){
         transition_low_airspeed_ms = 0;
         assist_strike_counter = 0;
     }
-
 
     if (is_tailsitter()) {
         if (transition_state == TRANSITION_ANGLE_WAIT_FW &&
@@ -1640,7 +1639,7 @@ void QuadPlane::update_transition(void)
             transition_state = TRANSITION_DONE;
             transition_from_stationary = false;
             transition_start_ms = 0;
-            if (assist_retry_timeout ==0){
+            if (assist_retry_timeout == 0){
                 transition_low_airspeed_ms = 0;
             }
             gcs().send_text(MAV_SEVERITY_INFO, "Transition done");
