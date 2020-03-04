@@ -5,5 +5,6 @@ USB_STRING_PRODUCT "SwoopOrange"
 
 DMA_NOSHARE USART2* SPI1* SPI4* USART6*
 
-
+# Serial 2 TX line unused (Ping)
+undef PD5
 
