@@ -793,29 +793,35 @@ void AP_GPS::update(void)
                     if (i == primary_instance) {
                         continue;
                     }
-                    if (state[i].status > state[primary_instance].status) {
-                        // we have a higher status lock, or primary is set to the blended GPS, change GPS
-                        primary_instance = i;
-                        _last_instance_swap_ms = now;
-                        continue;
+                    
+                    GPS_Status status_i = state[i].status;
+                    GPS_Status status_primary = state[primary_instance].status;
+                      
+
+                    // Treat U-blox F9 as SBAS if it has more than or equal to 16 satellites, as it is dual band GPS and is more accurate than M8 with SBAS                    
+                    if (status_i == GPS_OK_FIX_3D && state[i].num_sats >= 16 && strcmp(drivers[i]->name(), "u-blox") == 0 && drivers[i]->hardware_generation() == AP_GPS_UBLOX::UBLOX_F9) {
+                        status_i = GPS_OK_FIX_3D_DGPS;
                     }
 
-                    bool another_gps_has_1_or_more_sats = (state[i].num_sats >= state[primary_instance].num_sats + 1);
+                    // Treat U-blox F9 as SBAS if it has more than or equal to 16 satellites, as it is dual band GPS and is more accurate than M8 with SBAS
+                    if (status_primary == GPS_OK_FIX_3D && state[primary_instance].num_sats >= 16 && strcmp(drivers[primary_instance]->name(), "u-blox") == 0 && drivers[primary_instance]->hardware_generation() == AP_GPS_UBLOX::UBLOX_F9) {
+                        status_primary = GPS_OK_FIX_3D_DGPS;
+                    }
 
-                    if (state[i].status == state[primary_instance].status && another_gps_has_1_or_more_sats) {
+                    bool should_switch = false;
 
-                        bool another_gps_has_2_or_more_sats = (state[i].num_sats >= state[primary_instance].num_sats + 2);
+                    if (status_i > status_primary) {
+                        should_switch = true;
+                    }
+                    
+                    else if (status_i == status_primary && !hal.util->get_soft_armed() && state[i].num_sats >= state[primary_instance].num_sats+3) {
+                        should_switch = true;                        
+                    }
 
-                        if ((another_gps_has_1_or_more_sats && (now - _last_instance_swap_ms) >= 20000) ||
-                            (another_gps_has_2_or_more_sats && (now - _last_instance_swap_ms) >= 5000)) {
-                            // this GPS has more satellites than the
-                            // current primary, switch primary. Once we switch we will
-                            // then tend to stick to the new GPS as primary. We don't
-                            // want to switch too often as it will look like a
-                            // position shift to the controllers.
-                            primary_instance = i;
-                            _last_instance_swap_ms = now;
-                        }
+                    if (should_switch) {
+                        primary_instance = i;
+                        _last_instance_swap_ms = now;
+                        gcs().send_text(MAV_SEVERITY_CRITICAL, "GPS Switch: Switched to %u", primary_instance+1);
                     }
                 }
             }
