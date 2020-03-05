@@ -2943,6 +2943,19 @@ if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN 
                     gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor %d not running!", i+1);
                     time_since_last_blh_warning = now;
                 }
+
+                //if idling on the pad and one of the motors hasnt started...
+                if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE){
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Hover motor failed - Abort takeoff");
+                    if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+                        plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
+                    }
+                    else{
+                        plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+                    }     
+                }
+    
+}
                 return false;
             }
             
