@@ -1520,17 +1520,32 @@ void QuadPlane::update_transition(void)
         // Takeoff transition timeout expired
         if(transition_failure > 0 && transition_from_stationary  && ((now - transition_start_ms) > ((uint32_t)transition_failure * 1000))){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Transition failed, exceeded time limit");
-            plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+                plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            }
+            else{
+                plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+            }
         }
         // Hover assist transition timeout expired
         else if (assist_timeout >0 && !transition_from_stationary &&((now - transition_start_ms) > ((uint32_t)assist_timeout * 1000))){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, exceeded time limit");
-            plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+                plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            }
+            else{
+                plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+            }
         }
         // Too many related hover assist events have been requested
         else if (assist_strikes >0 and assist_strike_counter>= assist_strikes -1){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, too many attempts");
-            plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+                plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            }
+            else{
+                plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+            }
         }
 
     }
