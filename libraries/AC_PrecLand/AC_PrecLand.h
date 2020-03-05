@@ -49,6 +49,15 @@ public:
     // update_rate_hz should be the rate at which the update method will be called in hz
     void init(uint16_t update_rate_hz);
 
+    // reinit precision landing immediately before use
+    void reinit(void);
+
+    // reset swoop filter state
+    void reset_swoop_filter(void);
+
+    // buffer is filled
+    bool swoop_filter_ready(void);
+
     // returns true if precision landing is healthy
     bool healthy() const { return _backend_state.healthy; }
 
@@ -73,6 +82,9 @@ public:
     // returns target position relative to the EKF origin
     bool get_target_position_cm(Vector2f& ret);
 
+    // Swoop filtered out
+    bool update_swoop_target_position_cm();
+
     // returns target relative position as 3D vector
     void get_target_position_measurement_cm(Vector3f& ret);
 
@@ -94,6 +106,9 @@ public:
     // returns true when the landing target has been detected
     bool target_acquired();
 
+    // get the lag of the most recent packet
+    uint32_t get_lag();
+
     // process a LANDING_TARGET mavlink message
     void handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms);
 
@@ -106,7 +121,11 @@ public:
     // get precland behaviour online
     enum PrecLandBehaviour get_online_behaviour() { return (enum PrecLandBehaviour)(_enabled_online); }
 
+    // landing timeout
+    bool timeout(void);
 
+    // backend initialised
+    bool backed_initialised(void);
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
@@ -114,7 +133,8 @@ public:
 private:
     enum estimator_type_t {
         ESTIMATOR_TYPE_RAW_SENSOR = 0,
-        ESTIMATOR_TYPE_KALMAN_FILTER = 1
+        ESTIMATOR_TYPE_KALMAN_FILTER = 1,
+        ESTIMATOR_TYPE_SWOOP_FILTER = 2
     };
 
     // returns enabled parameter as an behaviour
@@ -144,9 +164,21 @@ private:
     AP_Float                    _land_ofs_cm_y;     // Desired landing position of the camera right of the target in vehicle body frame
     AP_Float                    _accel_noise;       // accelerometer process noise
     AP_Vector3f                 _cam_offset;        // Position of the camera relative to the CG
+    AP_Int8                     _timeout;           // Target search timeout
+    AP_Int8                     _tacq_timeout;      // Time until EKF estimate resets if target not seen
+    AP_Int16                    _num_ave_samples;
+    AP_Int16                    _outlier_length_cm;
+    AP_Int16                    _max_outliers;
+
+    bool                        _update_swoop_filt; // Only update swoop filter on new LOS
+    Vector2f                    _target_pos_abs_meas_NE;
+    Vector2f                    _ave_target_pos_abs_out_NE;
+    uint32_t                    _cnt;
+    uint32_t                    _outliers;
 
     uint8_t                     _enabled_online;    // behaviour set by mission (online), does not write to param EEPROM
     uint32_t                    _last_update_ms;    // system time in millisecond when update was last called
+    uint32_t                    _commence_time;     // Timestamp when precision landing commences looking for the target, used in timeout
     bool                        _target_acquired;   // true if target has been seen recently
     uint32_t                    _last_backend_los_meas_ms;  // system time target was last seen
 

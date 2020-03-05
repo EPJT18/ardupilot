@@ -32,6 +32,9 @@ public:
     // return true if there is a valid los measurement available
     bool have_los_meas() override;
 
+    // get latest lag
+    uint32_t get_lag(void) override;
+
 private:
     SITL::SITL          *_sitl;                 // sitl instance pointer
     Vector3f            _los_meas_body;         // unit vector in body frame pointing towards target

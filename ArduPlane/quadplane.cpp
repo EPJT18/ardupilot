@@ -1242,7 +1242,8 @@ bool QuadPlane::precland_active(void) const
     // if (precland.get_online_behaviour() == 0){
     //     return false;
     // }
-    return precland.enabled() && pos_control->is_active_xy() && precland.target_acquired();
+
+    return precland.enabled() && pos_control->is_active_xy() && precland.target_acquired() && precland.swoop_filter_ready();
 #else
     return false;
 #endif
@@ -2358,6 +2359,10 @@ void QuadPlane::vtol_position_controller(void)
             poscontrol.state = QPOS_POSITION2;
             loiter_nav->clear_pilot_desired_acceleration();
             loiter_nav->init_target();
+            //reinitialise precland controller
+#if PRECISION_LANDING == ENABLED
+            plane.g2.precland.reinit();
+#endif
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL position2 started v=%.1f d=%.1f",
                                     (double)ahrs.groundspeed(), (double)plane.auto_state.wp_distance);
         }
@@ -2388,7 +2393,6 @@ void QuadPlane::vtol_position_controller(void)
 
 #if PRECISION_LANDING == ENABLED
 
-
             AC_PrecLand &precland = plane.g2.precland;
             Vector2f target_pos, target_vel_rel;
             
@@ -2399,11 +2403,12 @@ void QuadPlane::vtol_position_controller(void)
                     pos_control->set_xy_target(target_pos.x, target_pos.y);
                 }
 
-                // If target velocity valid
+                // // If target velocity valid
                 if (precland.get_target_velocity_relative_cms(target_vel_rel)) {
                     // override the vehicle velocity
                     pos_control->override_vehicle_velocity_xy(-target_vel_rel);
                 }
+
             }else{
                 // If precland disabled, land as usual
                 pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
@@ -2730,12 +2735,6 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     attitude_control->reset_rate_controller_I_terms();
     pos_control->get_accel_z_pid().reset_I();
     pos_control->get_vel_xy_pid().reset_I();
-
-// #if PRECISION_LANDING == ENABLED
-
-//     AC_PrecLand &precland = plane.g2.precland;
-//     precland.set_online_behaviour(cmd.content.vtol_land.precland_status);
-// #endif
     
     plane.set_next_WP(cmd.content.location);
     // initially aim for current altitude
@@ -3053,6 +3052,16 @@ bool QuadPlane::verify_vtol_land(void)
 
 #if PRECISION_LANDING == ENABLED
     AC_PrecLand &precland = plane.g2.precland;
+
+    if (poscontrol.state == QPOS_POSITION2){
+        // check for target timeout
+
+        //TODO: check whether to abort or not if so, turn off prec land
+        if (precland.timeout()){
+            return true;
+        }
+    }
+
     bool precland_enabled = precland.enabled(); // TODO convert this to online enabled
     bool target_position_confident = precland.target_pos_confident();
     bool within_descending_radius = precland.get_target_distance_scalar()< descend_radius;

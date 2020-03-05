@@ -186,13 +186,13 @@ void Plane::Log_Write_Precland()
 {
  #if PRECISION_LANDING == ENABLED
     // exit immediately if not enabled
-    if (!g2.precland.enabled()) {
+    if (!g2.precland.enabled() | !g2.precland.backed_initialised()) {
         return;
     }
 
     Vector3f target_pos_meas = Vector3f(0.0f,0.0f,0.0f);
     Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
-    g2.precland.get_target_position_cm(target_pos_abs);
+    g2.precland.get_target_position_relative_cm(target_pos_abs);
     g2.precland.get_target_position_measurement_cm(target_pos_meas);
     float x_cov = g2.precland.get_ekf_x_cov(); 
     float y_cov = g2.precland.get_ekf_y_cov();

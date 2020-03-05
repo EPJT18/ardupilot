@@ -55,4 +55,10 @@ bool AC_PrecLand_SITL_Gazebo::have_los_meas() {
     return _have_los_meas;
 }
 
+// not implemented!
+uint32_t AC_PrecLand_SITL_Gazebo::get_lag(void)
+{
+    return 0;
+}
+
 #endif

@@ -1070,7 +1070,7 @@ private:
 #if SOARING_ENABLED == ENABLED
     void update_soaring();
 #endif
-    
+
     // precision_landing.cpp
     void init_precland();
     void update_precland();
