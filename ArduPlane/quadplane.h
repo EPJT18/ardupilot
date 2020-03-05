@@ -83,7 +83,7 @@ public:
     
     bool handle_do_vtol_transition(enum MAV_VTOL_STATE state);
 
-    bool do_vtol_takeoff(const AP_Mission::Mission_Command& cmd);
+    bool do_vtol_takeoff(const AP_Mission::Mission_Command& cmd,const AP_Mission::Mission_Command& next_cmd);
     bool do_vtol_land(const AP_Mission::Mission_Command& cmd);
     bool verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd);
     bool verify_vtol_land(void);
@@ -196,6 +196,8 @@ private:
 
     // get overall desired yaw rate in cd/s
     float get_desired_yaw_rate_cds(void);
+
+    float get_yaw_wait_yaw_rate_cds(void);
     
     // get desired climb rate in cm/s
     float get_pilot_desired_climb_rate_cms(void) const;
@@ -368,8 +370,16 @@ private:
         TRANSITION_DONE
     } transition_state;
 
+    bool vtol_takeoff_yaw_wait:1;
+
+    uint32_t vtol_takeoff_target_heading;
+
+    int32_t vtol_takeoff_yaw_error;
+
+  
     // true when waiting for pilot throttle
     bool throttle_wait:1;
+   
 
     // true when quad is assisting a fixed wing mode
     bool assisted_flight:1;
@@ -517,6 +527,7 @@ private:
         OPTION_RESPECT_TAKEOFF_FRAME=(1<<3),
         OPTION_MISSION_LAND_FW_APPROACH=(1<<4),
         OPTION_FS_QRTL=(1<<5),
+        OPTION_YAW_BEFORE_TRANSTION=(1<<6)
     };
 
     AP_Float takeoff_failure_scalar;

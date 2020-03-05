@@ -41,7 +41,10 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     case MAV_CMD_NAV_TAKEOFF:
         crash_state.is_crashed = false;
         if (quadplane.is_vtol_takeoff(cmd.id)) {
-            return quadplane.do_vtol_takeoff(cmd);
+             AP_Mission::Mission_Command next_nav_cmd;
+            const uint16_t next_index = mission.get_current_nav_index() + 1;
+            mission.get_next_nav_cmd(next_index, next_nav_cmd);
+            return quadplane.do_vtol_takeoff(cmd,next_nav_cmd);
         }
         do_takeoff(cmd);
         break;
@@ -88,7 +91,15 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 
     case MAV_CMD_NAV_VTOL_TAKEOFF:
         crash_state.is_crashed = false;
-        return quadplane.do_vtol_takeoff(cmd);
+        if (quadplane.is_vtol_takeoff(cmd.id)) {
+             AP_Mission::Mission_Command next_nav_cmd;
+            const uint16_t next_index = mission.get_current_nav_index() + 1;
+            mission.get_next_nav_cmd(next_index, next_nav_cmd);
+            return quadplane.do_vtol_takeoff(cmd,next_nav_cmd);
+        }
+        do_takeoff(cmd);
+        break;
+        
 
     case MAV_CMD_NAV_VTOL_LAND:
         if (quadplane.options & QuadPlane::OPTION_MISSION_LAND_FW_APPROACH) {
