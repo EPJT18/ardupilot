@@ -355,6 +355,7 @@ private:
 
     struct {
         AP_Float gain;
+        AP_Float Pgain;
         float integrator;
         uint32_t last_ms;
         int8_t last_pct;

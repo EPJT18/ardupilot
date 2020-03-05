@@ -504,6 +504,15 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
 
     AP_GROUPINFO("H_A_RETRY", 27, QuadPlane, assist_retry_timeout, 15),
 
+     // @Param: VFWD_P_GAIN
+    // @DisplayName: Forward velocity hold gain
+    // @Description: Controls use of forward motor in vtol modes. If this is zero then the forward motor will not be used for position control in VTOL modes. A value of 0.05 is a good place to start if you want to use the forward motor for position control. No forward motor will be used in QSTABILIZE or QHOVER modes. Use QLOITER for position hold with the forward motor.
+    // @Range: 0 0.5
+    // @Increment: 0.01
+    // @User: Standard
+    AP_GROUPINFO("VFWD_PGAIN", 28, QuadPlane, vel_forward.Pgain, 0),
+
+
 
 
 
@@ -3079,10 +3088,6 @@ int8_t QuadPlane::forward_throttle_pct(void)
         vel_forward.integrator = 0;
         deltat = 0.1;
     }
-    if (deltat < 0.1) {
-        // run at 10Hz
-        return vel_forward.last_pct;
-    }
     vel_forward.last_ms = AP_HAL::millis();
     
     // work out the desired speed in forward direction
@@ -3119,13 +3124,14 @@ int8_t QuadPlane::forward_throttle_pct(void)
     // inhibit reverse throttle and allow petrol engines with min > 0
     int8_t fwd_throttle_min = plane.have_reverse_thrust() ? 0 : plane.aparm.throttle_min;
     vel_forward.integrator = constrain_float(vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_max);
+    float outputValue = constrain_float( fwd_vel_error * vel_forward.Pgain * 100 + vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_max);
 
     if (in_vtol_land_approach()) {
         // when we are doing horizontal positioning in a VTOL land
         // we always allow the fwd motor to run. Otherwise a bad
         // lidar could cause the aircraft not to be able to
         // approach the landing point when landing below the takeoff point
-        vel_forward.last_pct = vel_forward.integrator;
+        vel_forward.last_pct = outputValue;
     } else if (in_vtol_land_final() && motors->limit.throttle_lower) {
         // we're in the settling phase of landing, disable fwd motor
         vel_forward.last_pct = 0;
@@ -3136,7 +3142,7 @@ int8_t QuadPlane::forward_throttle_pct(void)
         float alt_cutoff = MAX(0,vel_forward_alt_cutoff);
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
 
-        vel_forward.last_pct = linear_interpolate(0, vel_forward.integrator,
+        vel_forward.last_pct = linear_interpolate(0, outputValue,
                                                   height_above_ground, alt_cutoff, alt_cutoff+2);
     }
     if (vel_forward.last_pct == 0) {
