@@ -1458,7 +1458,7 @@ bool QuadPlane::assistance_needed()
     }
     
     // Check for altitude assist
-    if (assist_alt > 0 && abs(plane.altitude_error_cm)>assist_alt*100) {
+    if (assist_alt > 0 && plane.altitude_error_cm>assist_alt*100) {
         if (!in_alt_assist) {
             in_alt_assist = true;
             gcs().send_text(MAV_SEVERITY_INFO, "Alt assist %d", (int)plane.altitude_error_cm/100);
