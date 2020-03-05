@@ -3059,10 +3059,6 @@ int8_t QuadPlane::forward_throttle_pct(void)
         vel_forward.integrator = 0;
         deltat = 0.1;
     }
-    if (deltat < 0.1) {
-        // run at 10Hz
-        return vel_forward.last_pct;
-    }
     vel_forward.last_ms = AP_HAL::millis();
     
     // work out the desired speed in forward direction
@@ -3099,13 +3095,14 @@ int8_t QuadPlane::forward_throttle_pct(void)
     // inhibit reverse throttle and allow petrol engines with min > 0
     int8_t fwd_throttle_min = plane.have_reverse_thrust() ? 0 : plane.aparm.throttle_min;
     vel_forward.integrator = constrain_float(vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_max);
+    float outputValue = constrain_float( fwd_vel_error * vel_forward.Pgain * 100 + vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_max);
 
     if (in_vtol_land_approach()) {
         // when we are doing horizontal positioning in a VTOL land
         // we always allow the fwd motor to run. Otherwise a bad
         // lidar could cause the aircraft not to be able to
         // approach the landing point when landing below the takeoff point
-        vel_forward.last_pct = vel_forward.integrator;
+        vel_forward.last_pct = outputValue;
     } else if (in_vtol_land_final() && motors->limit.throttle_lower) {
         // we're in the settling phase of landing, disable fwd motor
         vel_forward.last_pct = 0;
@@ -3116,7 +3113,7 @@ int8_t QuadPlane::forward_throttle_pct(void)
         float alt_cutoff = MAX(0,vel_forward_alt_cutoff);
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
 
-        vel_forward.last_pct = linear_interpolate(0, vel_forward.integrator,
+        vel_forward.last_pct = linear_interpolate(0, outputValue,
                                                   height_above_ground, alt_cutoff, alt_cutoff+2);
     }
     if (vel_forward.last_pct == 0) {
