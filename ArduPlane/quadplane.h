@@ -315,6 +315,7 @@ private:
     AP_Int16 bl_lowest_rpm;
     AP_Int16 bl_startup_time;
     AP_Int16 bl_fail_time;
+    AP_Int16 enable_loiter_on_motor_failure;
     AP_Int32 swoop_options;
     AP_Int16 motor_fail_rtl_range;
     AP_Int32 bl_last_spinning_packet[8];

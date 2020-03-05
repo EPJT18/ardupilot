@@ -512,6 +512,7 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     // @User: Standard
     AP_GROUPINFO("VFWD_PGAIN", 28, QuadPlane, vel_forward.Pgain, 0),
 
+    AP_GROUPINFO("BL_LOIT_EA", 29, QuadPlane, enable_loiter_on_motor_failure, 0),
 
 
 
@@ -3010,7 +3011,7 @@ bool QuadPlane::verify_vtol_land(void)
     if (!available()) {
         return true;
     }
-    if (!check_hover_motors_spinning()&&in_vtol_land_approach()){
+    if ((!check_hover_motors_spinning())&&in_vtol_land_approach() && (enable_loiter_on_motor_failure >0) ){
         plane.set_mode(plane.mode_loiter, ModeReason::VTOL_FAILED_TRANSITION);
     }
     if (poscontrol.state == QPOS_POSITION2 &&
