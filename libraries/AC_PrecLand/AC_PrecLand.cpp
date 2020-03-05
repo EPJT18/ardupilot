@@ -158,7 +158,26 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Units: s
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("TIMEOUT", 15, AC_PrecLand, _timeout, 0.02f),
+    AP_GROUPINFO("TIMEOUT", 15, AC_PrecLand, _timeout, 5),
+
+    // @Param: DESCEND_SPEED_MIN
+    // @DisplayName: Precland minimum descend speed
+    // @Description: Will not descend below this speed if performing precision landing
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+
+    AP_GROUPINFO("DN_SPD_MIN", 16, AC_PrecLand, _land_speed_min_cms, 50),
+
+    // @Param: LAND_ACCEPTABLE_ERROR
+    // @DisplayName: Acceptable pos error
+    // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MAX_POS_ERR", 17, AC_PrecLand, _acceptable_error_cm, 100),
 
     AP_GROUPEND
 };
@@ -331,7 +350,6 @@ bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
         }
     }
 }
-
 
 // To be used with SWOOP_FILTER enabled
 bool AC_PrecLand::update_swoop_target_position_cm()

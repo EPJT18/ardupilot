@@ -1211,11 +1211,10 @@ float QuadPlane::landing_descent_rate_cms(float height_above_ground) const
                                    height_above_ground,
                                    land_final_alt, land_final_alt+6);
 #if PRECISION_LANDING == ENABLED
+    AC_PrecLand &precland = plane.g2.precland;
     if (precland_active()) {
-        const float precland_acceptable_error = 100.0f;
-        const float precland_min_descent_speed = 10.0f;
-        float land_slowdown = MAX(0.0f, pos_control->get_horizontal_error()*(speed_down/precland_acceptable_error));
-        ret = MAX(precland_min_descent_speed, ret - land_slowdown);
+        float land_slowdown = MAX(0.0f, pos_control->get_horizontal_error()*(speed_down/precland.get_acceptable_error_cm()));
+        ret = MAX(precland.get_min_descent_speed(), ret - land_slowdown);
     }
 #endif
     return ret;
@@ -1238,12 +1237,10 @@ bool QuadPlane::precland_active(void) const
     }
     AC_PrecLand &precland = plane.g2.precland;
 
-    // // If no landing target expected at WP (set by mission)
-    // if (precland.get_online_behaviour() == 0){
-    //     return false;
-    // }
-
-    return precland.enabled() && pos_control->is_active_xy() && precland.target_acquired() && precland.swoop_filter_ready();
+    return precland.enabled() && 
+            pos_control->is_active_xy() && 
+            precland.target_acquired() && 
+            precland.swoop_filter_ready();
 #else
     return false;
 #endif
@@ -3053,21 +3050,51 @@ bool QuadPlane::verify_vtol_land(void)
 #if PRECISION_LANDING == ENABLED
     AC_PrecLand &precland = plane.g2.precland;
 
-    if (poscontrol.state == QPOS_POSITION2){
-        // check for target timeout
+    // local boolean controls if precland is used, class attribute controls if it is run at all
+    bool precland_enabled = precland.enabled();
+    bool precland_descend = false;
 
-        //TODO: check whether to abort or not if so, turn off prec land
-        if (precland.timeout()){
-            return true;
+    // infer abort behaviour from current WP 
+    // 0: Precland Disabled
+    // 1: Abort and continue to next WP
+    // 2: Proceed with GPS landing
+    // 3: Abort and continue to alternate WP
+    landing_behaviour qland_behaviour = (enum landing_behaviour)plane.mission.get_current_nav_cmd().p1;
+    
+    // do not attempt precland 
+    if (qland_behaviour == PLND_DISABLED){
+        precland_enabled = false;
+    }
+
+    // timeout behaviour, whether to abort or continue
+    // currently set that the descend state or later is the point of no return
+    if(poscontrol.state == QPOS_POSITION2 && precland.timeout()){
+        switch(qland_behaviour){
+            
+            case PLND_DISABLED:
+                break;
+            case ABORT_CONTINUE_NEXT_WP:
+                // abort
+                gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to next mission WP.");
+                return true;
+            case PROCEED_GPS_LAND:
+                // proceed, disable precision landing
+                gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
+                precland_enabled = false;
+                break;
+            case ABORT_CONTINUE_CNTGCY_WP:
+                // abort
+                gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to contingency WP.");
+                return true;
         }
     }
 
-    bool precland_enabled = precland.enabled(); // TODO convert this to online enabled
+    
     bool target_position_confident = precland.target_pos_confident();
     bool within_descending_radius = precland.get_target_distance_scalar()< descend_radius;
-    bool precland_descend = precland_active() &&
-                            target_position_confident &&
-                            within_descending_radius;
+    precland_descend = precland_active() &&
+                        target_position_confident &&
+                        within_descending_radius;
 #else
     bool precland_enabled = false;
     bool precland_descend = false;

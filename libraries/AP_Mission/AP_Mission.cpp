@@ -931,7 +931,11 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
     case MAV_CMD_NAV_VTOL_TAKEOFF:
         break;
 
-    case MAV_CMD_NAV_VTOL_LAND:
+    case MAV_CMD_NAV_VTOL_LAND: 
+                                                        // If Visual Landing fails:
+        cmd.p1 = packet.param1;                         // 0: Abort and continue to next WP
+                                                        // 1: Proceed with GPS landing
+                                                        // 2: Abort and continue to alternate WP
         break;
 
     case MAV_CMD_DO_VTOL_TRANSITION:
@@ -1368,6 +1372,7 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
         break;
 
     case MAV_CMD_NAV_VTOL_LAND:
+        packet.param1 = cmd.p1;
         break;
 
     case MAV_CMD_DO_VTOL_TRANSITION:
