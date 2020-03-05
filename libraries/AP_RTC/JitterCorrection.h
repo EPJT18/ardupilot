@@ -7,7 +7,7 @@
 class JitterCorrection {
 public:
     // constructor
-    JitterCorrection(uint16_t max_lag_ms=500, uint16_t convergence_loops=100);
+    JitterCorrection(uint16_t max_lag_ms=750, uint16_t convergence_loops=100);
 
     // correct an offboard timestamp to a jitter-free local
     // timestamp. See JitterCorrection.cpp for details

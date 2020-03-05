@@ -38,10 +38,14 @@ public:
     // parses a mavlink message from the companion computer
     void handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) override;
 
+    // get latest lag
+    uint32_t get_lag(void) override;
+
 private:
     float               _distance_to_target;    // distance from the camera to target in meters
 
     Vector3f            _los_meas_body;         // unit vector in body frame pointing towards target
     bool                _have_los_meas;         // true if there is a valid measurement from the camera
     uint32_t            _los_meas_time_ms;      // system time in milliseconds when los was measured
+    uint32_t            _lag_time;
 };

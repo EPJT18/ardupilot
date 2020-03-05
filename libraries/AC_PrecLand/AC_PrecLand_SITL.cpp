@@ -45,4 +45,11 @@ bool AC_PrecLand_SITL::get_los_body(Vector3f& ret) {
     return true;
 }
 
+
+// not implemented!
+uint32_t AC_PrecLand_SITL::get_lag(void)
+{
+    return 0;
+}
+
 #endif

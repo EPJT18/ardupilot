@@ -36,6 +36,9 @@ public:
     // return true if there is a valid los measurement available
     bool have_los_meas() override;
 
+       // get latest lag
+    uint32_t get_lag(void) override;
+
 private:
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     AP_IRLock_SITL irlock;

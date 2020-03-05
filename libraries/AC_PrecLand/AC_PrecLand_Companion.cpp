@@ -42,6 +42,11 @@ float AC_PrecLand_Companion::distance_to_target()
     return _distance_to_target;
 }
 
+uint32_t AC_PrecLand_Companion::get_lag(void)
+{
+    return _lag_time;
+}
+
 void AC_PrecLand_Companion::handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms)
 {
     _distance_to_target = packet.distance;
@@ -51,5 +56,14 @@ void AC_PrecLand_Companion::handle_msg(const mavlink_landing_target_t &packet, u
     _los_meas_body /= _los_meas_body.length();
 
     _los_meas_time_ms = timestamp_ms;
+    _lag_time = AP_HAL::millis() - timestamp_ms;
     _have_los_meas = true;
+
+    AP::logger().Write("PLMV", "TimeUS,tsmp,angX,angY,camtime,lag", "QIfffI",
+                                        AP_HAL::micros64(),
+                                        (uint32_t)timestamp_ms,
+                                        (float)packet.angle_x,
+                                        (float)packet.angle_y,
+                                        (float)packet.size_x,
+                                        (uint32_t)_lag_time);
 }
