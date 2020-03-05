@@ -36,6 +36,14 @@ public:
         PRECLAND_BEHAVIOR_CAUTIOUS
     };
 
+    // precision landing WP-programmed behaviours
+    enum PrecLandWPBehaviour {
+        PRECLAND_INACTIVE = 0,
+        PRECLAND_ABORT_CONTINUE_MISSION,
+        PRECLAND_CONTINUE_GPS_GUIDANCE,
+        PRECLAND_ABORT_CONTINGENCY_LAND
+    };
+
     // types of precision landing (used for PRECLAND_TYPE parameter)
     enum PrecLandType {
         PRECLAND_TYPE_NONE = 0,
@@ -76,6 +84,12 @@ public:
     // returns ekf outlier count
     uint32_t ekf_outlier_count() const { return _outlier_reject_count; }
 
+    // returns minimum descent speed
+    uint16_t get_min_descent_speed() const { return _land_speed_min_cms; }
+
+    // returns acceptable position error while descending
+    uint16_t get_acceptable_error_cm() const { return _acceptable_error_cm; }
+
     // give chance to driver to get updates from sensor, should be called at 400hz
     void update(float rangefinder_alt_cm, bool rangefinder_alt_valid);
 
@@ -114,12 +128,6 @@ public:
 
     // returns true when we are confident of the target's position
     bool target_pos_confident(void);
-
-    // set precland behaviour online
-    void set_online_behaviour(uint8_t enabled_status){ _enabled_online = enabled_status; }
-    
-    // get precland behaviour online
-    enum PrecLandBehaviour get_online_behaviour() { return (enum PrecLandBehaviour)(_enabled_online); }
 
     // landing timeout
     bool timeout(void);
@@ -176,7 +184,9 @@ private:
     uint32_t                    _cnt;
     uint32_t                    _outliers;
 
-    uint8_t                     _enabled_online;    // behaviour set by mission (online), does not write to param EEPROM
+    AP_Int16                    _land_speed_min_cms;// Minimum descent speed if outside of acceptable position error
+    AP_Int16                    _acceptable_error_cm; // Acceptable position error before descent must be slowed
+
     uint32_t                    _last_update_ms;    // system time in millisecond when update was last called
     uint32_t                    _commence_time;     // Timestamp when precision landing commences looking for the target, used in timeout
     bool                        _target_acquired;   // true if target has been seen recently

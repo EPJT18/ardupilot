@@ -410,6 +410,14 @@ private:
         QPOS_LAND_FINAL,
         QPOS_LAND_COMPLETE
     };
+
+    enum landing_behaviour {
+        PLND_DISABLED,
+        ABORT_CONTINUE_NEXT_WP,
+        PROCEED_GPS_LAND,
+        ABORT_CONTINUE_CNTGCY_WP
+    };
+
     struct {
         enum position_control_state state;
         float speed_scale;
