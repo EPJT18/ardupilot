@@ -116,6 +116,8 @@ public:
 
     // returns the covariance of the target y pos kalman filter
     float get_ekf_y_cov(void);
+    
+    uint16_t get_min_search_alt() const {return _min_search_alt; }
 
     // returns true when the landing target has been detected
     bool target_acquired();
@@ -128,6 +130,8 @@ public:
 
     // returns true when we are confident of the target's position
     bool target_pos_confident(void);
+
+    void start_search_timer(void);
 
     // landing timeout
     bool timeout(void);
@@ -177,6 +181,7 @@ private:
     AP_Int16                    _num_ave_samples;
     AP_Int16                    _outlier_length_cm;
     AP_Int16                    _max_outliers;
+    AP_Int16                    _min_search_alt;    // Alt where precision landing timer begins
 
     bool                        _update_swoop_filt; // Only update swoop filter on new LOS
     Vector2f                    _target_pos_abs_meas_NE;

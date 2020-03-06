@@ -265,6 +265,7 @@ private:
     bool _precision_loiter_enabled;
 #endif
     bool precland_active() const;
+    bool below_min_precland_search_alt(void);
 
     AP_Int16 transition_time_ms;
 
@@ -434,7 +435,9 @@ private:
     enum position_control_state {
         QPOS_POSITION1,
         QPOS_POSITION2,
-        QPOS_LAND_DESCEND,
+        QPOS_POSITION3,
+        QPOS_LAND_DESCEND1,
+        QPOS_LAND_DESCEND2,
         QPOS_LAND_FINAL,
         QPOS_LAND_COMPLETE
     };

@@ -160,7 +160,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("TIMEOUT", 15, AC_PrecLand, _timeout, 5),
 
-    // @Param: DESCEND_SPEED_MIN
+    // @Param: DN_SPD_MIN
     // @DisplayName: Precland minimum descend speed
     // @Description: Will not descend below this speed if performing precision landing
     // @Units: cm
@@ -170,7 +170,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
 
     AP_GROUPINFO("DN_SPD_MIN", 16, AC_PrecLand, _land_speed_min_cms, 50),
 
-    // @Param: LAND_ACCEPTABLE_ERROR
+    // @Param: MAX_POS_ERR
     // @DisplayName: Acceptable pos error
     // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
     // @Units: cm
@@ -178,6 +178,15 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("MAX_POS_ERR", 17, AC_PrecLand, _acceptable_error_cm, 100),
+
+    // @Param: MIN_SRC_ALT
+    // @DisplayName: Acceptable pos error
+    // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
+    // @Units: m
+    // @Range: 10 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MIN_SRC_ALT", 18, AC_PrecLand, _min_search_alt, 40),
 
     AP_GROUPEND
 };
@@ -254,9 +263,13 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
 void AC_PrecLand::reinit(void){
 
     //timeout
-    _commence_time = AP_HAL::millis();
+    _commence_time = 0; // if zero, not active
     reset_swoop_filter();
     
+}
+
+void AC_PrecLand::start_search_timer(void){
+    _commence_time = AP_HAL::millis();
 }
 
 void AC_PrecLand::reset_swoop_filter(void){
@@ -578,6 +591,7 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
 
 bool AC_PrecLand::target_pos_confident()
 {
+    //TODO implement a measure of the swoop filter's confidence
     switch (_estimator_type) {
         case ESTIMATOR_TYPE_SWOOP_FILTER:
         {
@@ -714,7 +728,7 @@ void AC_PrecLand::run_output_prediction()
 
 bool AC_PrecLand::timeout(void){
 
-    // if timer hasn't been started yet, or has been started and since expired
+    // if timer hasn't been started yet or has been started and since expired
     if (!(_commence_time == 0) && (AP_HAL::millis() - _commence_time) >= (uint32_t)(_timeout.get()*1000)){
         return true;
     }else{
