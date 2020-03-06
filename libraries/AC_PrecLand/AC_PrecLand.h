@@ -97,7 +97,10 @@ public:
     bool get_target_position_cm(Vector2f& ret);
 
     // Swoop filtered out
-    bool update_swoop_target_position_cm();
+    void update_swoop_target_position_cm();
+
+    // Return the average of a buffer of type Vector2f
+    Vector2f get_buffer_average(ObjectArray<Vector2f> *buffer);
 
     // returns target relative position as 3D vector
     void get_target_position_measurement_cm(Vector3f& ret);
@@ -182,12 +185,15 @@ private:
     AP_Int16                    _outlier_length_cm;
     AP_Int16                    _max_outliers;
     AP_Int16                    _min_search_alt;    // Alt where precision landing timer begins
+    AP_Int16                    _acceptable_target_error_cm; // Max error the estimate buffer can have before becoming invalid
+    AP_Float                    _max_cull_pct;      // Max percentage of the buffer that are considered outliers before the estimate becomes invalid
 
     bool                        _update_swoop_filt; // Only update swoop filter on new LOS
     Vector2f                    _target_pos_abs_meas_NE;
     Vector2f                    _ave_target_pos_abs_out_NE;
     uint32_t                    _cnt;
     uint32_t                    _outliers;
+    bool                        _swoop_filter_confident;
 
     AP_Int16                    _land_speed_min_cms;// Minimum descent speed if outside of acceptable position error
     AP_Int16                    _acceptable_error_cm; // Acceptable position error before descent must be slowed
@@ -219,6 +225,7 @@ private:
         uint64_t time_usec;
     };
     ObjectArray<inertial_data_frame_s> *_inertial_history;
+    ObjectArray<Vector2f> *_target_history;
 
     // backend state
     struct precland_state {

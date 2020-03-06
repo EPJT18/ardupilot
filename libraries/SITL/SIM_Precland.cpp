@@ -98,6 +98,14 @@ const AP_Param::GroupInfo SIM_Precland::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("DIST_LMT", 8, SIM_Precland, _dist_limit, 10),
 
+    // @Param: DIST_LIMIT
+    // @DisplayName: Precland device lateral range
+    // @Description: Precland device maximum lateral range
+    // @Units: cm
+    // @Range: 5 100
+    // @User: Advanced
+    AP_GROUPINFO("NSE", 9, SIM_Precland, _max_noise, 20),
+
     AP_GROUPEND
 };
 
@@ -162,6 +170,13 @@ void SIM_Precland::update(const Location &loc, const Vector3f &position)
             break;
         }
     }
+
+    // add noise
+    if(rand_float()>0.6){
+        center.x+=0.01*_max_noise*rand_float();
+        center.y+=0.01*_max_noise*rand_float();
+    }
+
     _target_pos = position - Vector3f(center.x, center.y, origin_height_m);
     _healthy = true;
 }
