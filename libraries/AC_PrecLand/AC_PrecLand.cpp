@@ -188,6 +188,24 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("MIN_SRC_ALT", 18, AC_PrecLand, _min_search_alt, 40),
 
+    // @Param: MAX_TGT_ERR
+    // @DisplayName: Acceptable target estimate error
+    // @Description: Max error the estimate buffer can have before becoming invalid.
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MAX_TGT_ERR", 19, AC_PrecLand, _acceptable_target_error_cm, 100),
+
+    // @Param: MAX_PCT_OTL
+    // @DisplayName: Acceptable outlier cull percentage
+    // @Description: Max percentage of the buffer that are considered outliers before the estimate becomes invalid
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("MAX_PCT_OTL", 20, AC_PrecLand, _max_cull_pct, 0.3),
+
     AP_GROUPEND
 };
 
@@ -214,9 +232,6 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     _backend = nullptr;
     _backend_state.healthy = false;
 
-    // initialise timeout and filter
-    reinit();
-
     // create inertial history buffer
     // constrain lag parameter to be within bounds
     _lag = constrain_float(_lag, 0.02f, 0.75f);
@@ -229,6 +244,15 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     if (_inertial_history == nullptr) {
         return;
     }
+
+    // create a history of past estimates, return on failure so no backends are created
+    _target_history = new ObjectArray<Vector2f>(_num_ave_samples);
+    if (_target_history == nullptr) {
+        return;
+    }
+
+    // initialise timeout and filter
+    reinit();
 
     // instantiate backend based on type parameter
     switch ((enum PrecLandType)(_type.get())) {
@@ -277,11 +301,12 @@ void AC_PrecLand::reset_swoop_filter(void){
     _cnt=0;
     _outliers=0;
     _update_swoop_filt = false;
+    _target_history->clear();
 }
 
 bool AC_PrecLand::swoop_filter_ready(void){
 
-    if(_estimator_type==ESTIMATOR_TYPE_SWOOP_FILTER && (_cnt<(uint16_t)_num_ave_samples)){
+    if(_estimator_type==ESTIMATOR_TYPE_SWOOP_FILTER && (_target_history->space()>0)){
         return false;
     }else{
         return true;
@@ -349,11 +374,6 @@ bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
             return true;
         }
         case ESTIMATOR_TYPE_SWOOP_FILTER: {
-
-            //check to see if buffer is filled for a stable estimate
-            if(_cnt<(uint16_t)_num_ave_samples){
-                return false;
-            }
             ret.x = _ave_target_pos_abs_out_NE.x * 100.0f;
             ret.y = _ave_target_pos_abs_out_NE.y * 100.0f;
             return true;
@@ -365,70 +385,107 @@ bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
 }
 
 // To be used with SWOOP_FILTER enabled
-bool AC_PrecLand::update_swoop_target_position_cm()
+void AC_PrecLand::update_swoop_target_position_cm()
 {
     if (!target_acquired()) {
-        return false;
+        return;
     }
+
     Vector2f curr_pos;
     if (!AP::ahrs().get_relative_position_NE_origin(curr_pos)) {
-        return false;
+        return;
     }
+
+    _swoop_filter_confident = false;
 
     // Newest target absolute estimate
     Vector2f curr_target_abs_NE;
 
     curr_target_abs_NE.x = (_target_pos_rel_out_NE.x + curr_pos.x);
-    curr_target_abs_NE.y = (_target_pos_rel_out_NE.y  + curr_pos.y);
-    
-    // Initialise average if first loop or max outliers is exceeded
-    if(_cnt<1 or _outliers>(uint16_t)_max_outliers){
-        _cnt=1;
-        _outliers=0;
-        _ave_target_pos_abs_out_NE.x = curr_target_abs_NE.x;
-        _ave_target_pos_abs_out_NE.y = curr_target_abs_NE.y;
+    curr_target_abs_NE.y = (_target_pos_rel_out_NE.y + curr_pos.y);
+
+    // Add newest target estimate to buffer, replacing oldest sample
+    _target_history->push_force(curr_target_abs_NE);
+
+    // If you cull more that CULL_PCNT_MAX outliers and max error is still greater that MAX_ERR
+    // it is not safe to land
+
+    // copy of buffer into a new one that we can cull, we don't remember which outliers we culled last loop
+    ObjectArray<Vector2f> *_tmp_target_history = new ObjectArray<Vector2f>(_num_ave_samples);
+    for (uint8_t k=0; k<_target_history->available(); k++) {
+        const Vector2f *sample = (*_target_history)[k];
+        _tmp_target_history->push_force(*sample);
     }
 
-    // Find distance from averaged point
-    Vector2f err;
-    err.x = curr_target_abs_NE.x - _ave_target_pos_abs_out_NE.x;
-    err.y = curr_target_abs_NE.y - _ave_target_pos_abs_out_NE.y;
+    int max_cull_samples = (int)_num_ave_samples*_max_cull_pct;
+    Vector2f max_err = Vector2f(0.0f, 0.0f);
+    Vector2f err = Vector2f(0.0f, 0.0f);
+    uint16_t err_index = 0;
+    uint16_t cull_counter = 0;
 
-    // Filter outliers
-    if(_cnt>=(uint16_t)_num_ave_samples && err.length()>_outlier_length_cm){
-        _outliers++;
-    }else if(_outliers>0){
-        _outliers--;
+    // if buffer not full, ignore
+    if (_target_history->space()>0){
+        return;
     }
 
-    // Update average
-    _ave_target_pos_abs_out_NE.x = ((_cnt-1)/(_cnt*1.0f))*_ave_target_pos_abs_out_NE.x + (1/(_cnt*1.0f))*curr_target_abs_NE.x;
-    _ave_target_pos_abs_out_NE.y = ((_cnt-1)/(_cnt*1.0f))*_ave_target_pos_abs_out_NE.y + (1/(_cnt*1.0f))*curr_target_abs_NE.y;
-    
-    if(_cnt<(uint16_t)_num_ave_samples){
-        _cnt++;
+    for (int l=0; l<max_cull_samples; l++){
+
+        // get average
+        _ave_target_pos_abs_out_NE = get_buffer_average(_tmp_target_history);
+
+        // get max error
+        err = Vector2f(0.0f, 0.0f);
+        max_err = Vector2f(0.0f, 0.0f);
+        float err_length;
+        for (uint8_t j=0; j<_tmp_target_history->available(); j++) {
+            const Vector2f *_err_target_data = (*_tmp_target_history)[j];
+            err.x = fabs(_ave_target_pos_abs_out_NE.x - _err_target_data->x);
+            err.y = fabs(_ave_target_pos_abs_out_NE.y - _err_target_data->y);
+            err_length = err.length();
+
+            // update largest error
+            if (err_length > fabs(max_err.length())){
+                err_index = j;
+                max_err.x = err.x;
+                max_err.y = err.y;
+            }
+        }
+
+        // break if acceptable, cull largest error and repeat if not acceptable
+        if (max_err.length()>_acceptable_target_error_cm*0.01f){
+            _tmp_target_history->remove(err_index);
+            cull_counter += 1;
+        }else{
+            _swoop_filter_confident = true;
+            break;
+        }
     }
 
-    AP::logger().Write("PLFT", "TimeUS,c,o,errX,errY,currX,currY,aveX,aveY", "QIIffffff",
+    AP::logger().Write("PLFT", "TimeUS,c,o,valid,cX,cY,aX,aY,e", "QIIIfffff",
                                         AP_HAL::micros64(),
-                                        (uint32_t)_cnt,
-                                        (uint32_t)_outliers,
-                                        (float)err.x,
-                                        (float)err.y,
+                                        (uint32_t)_target_history->available(),
+                                        (uint32_t)cull_counter,
+                                        (uint16_t)_swoop_filter_confident,
                                         (float)curr_target_abs_NE.x,
                                         (float)curr_target_abs_NE.y,
                                         (float)_ave_target_pos_abs_out_NE.x,
-                                        (float)_ave_target_pos_abs_out_NE.y);
+                                        (float)_ave_target_pos_abs_out_NE.y,
+                                        (float)max_err.length());
+}
 
-    // Not enough samples for a stable estimate
-    if(_cnt<(uint16_t)_num_ave_samples){
-        return false;
+Vector2f AC_PrecLand::get_buffer_average(ObjectArray<Vector2f> *buffer){
+
+    Vector2f sum = Vector2f(0.0f, 0.0f);
+    Vector2f ave;
+    for (uint8_t i=0; i<buffer->available(); i++) {
+        const Vector2f *sample = (*buffer)[i];
+        sum.x += sample->x;
+        sum.y += sample->y;
     }
+    ave.x = sum.x/(buffer->available());
+    ave.y = sum.y/(buffer->available());
 
-    // // Return commanded land location
-    // ret.x = _ave_target_pos_abs_out_NE.x*100.0f;    //m to cm
-    // ret.y = _ave_target_pos_abs_out_NE.y*100.0f;
-    return true;
+    return ave;
 }
 
 void AC_PrecLand::get_target_position_measurement_cm(Vector3f& ret)
@@ -595,7 +652,7 @@ bool AC_PrecLand::target_pos_confident()
     switch (_estimator_type) {
         case ESTIMATOR_TYPE_SWOOP_FILTER:
         {
-            FALLTHROUGH;
+            return _swoop_filter_confident;
         }
         case ESTIMATOR_TYPE_RAW_SENSOR: 
         {

@@ -50,6 +50,7 @@ public:
     AP_Int32 _rate;
     AP_Float _alt_limit;
     AP_Float _dist_limit;
+    AP_Int16 _max_noise;
 
     enum PreclandType {
         PRECLAND_TYPE_CYLINDER = 0,

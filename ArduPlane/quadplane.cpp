@@ -2401,7 +2401,7 @@ void QuadPlane::vtol_position_controller(void)
                     pos_control->set_xy_target(target_pos.x, target_pos.y);
                 }
 
-                // // If target velocity valid
+                // If target velocity valid
                 if (precland.get_target_velocity_relative_cms(target_vel_rel)) {
                     // override the vehicle velocity
                     pos_control->override_vehicle_velocity_xy(-target_vel_rel);
@@ -3067,32 +3067,7 @@ bool QuadPlane::verify_vtol_land(void)
     if (qland_behaviour == PLND_DISABLED){
         precland_enabled = false;
     }
-
-    // timeout behaviour, whether to abort or continue
-    // currently set that the descend state or later is the point of no return
-    // Note: precland.timeout is only valid once it has been reinitialised on transition from QPOS_POSITION1 to QPOS_POSITION2
-    if(poscontrol.state > QPOS_POSITION1 && precland.timeout()){
-        switch(qland_behaviour){
-            
-            case PLND_DISABLED:
-                break;
-            case ABORT_CONTINUE_NEXT_WP:
-                // abort
-                gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to next WP.");
-                return true;
-            case PROCEED_GPS_LAND:
-                // proceed, disable precision landing
-                gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
-                precland_enabled = false;
-                break;
-            case ABORT_CONTINUE_CNTGCY_WP:
-                // abort
-                gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to contingency WP.");
-                return true;
-        }
-    }
-
-    
+  
     bool target_position_confident = precland.target_pos_confident();
     bool within_descending_radius = precland.get_target_distance_scalar()< descend_radius;
     precland_descend = precland_active() &&
@@ -3103,7 +3078,37 @@ bool QuadPlane::verify_vtol_land(void)
     bool precland_descend = false;
 #endif
 
-// TODO: Timeout
+    // timeout behaviour, whether to abort or continue
+    // currently set that the descend state or later is the point of no return
+    // Note: precland.timeout is only valid once it has been reinitialised on transition from QPOS_POSITION2 to QPOS_POSITION3
+    if(poscontrol.state == QPOS_POSITION3){
+
+        if(precland.target_acquired() && precland_descend){
+            gcs().send_text(MAV_SEVERITY_INFO, "Precland target found, continuing descent.");
+            poscontrol.state = QPOS_LAND_DESCEND2;
+        }
+
+        if(precland.timeout()){
+            switch(qland_behaviour){
+                
+                case PLND_DISABLED:
+                    break;
+                case ABORT_CONTINUE_NEXT_WP:
+                    // abort
+                    gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to next WP.");
+                    return true;
+                case PROCEED_GPS_LAND:
+                    // proceed, disable precision landing
+                    gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
+                    precland_enabled = false;
+                    break;
+                case ABORT_CONTINUE_CNTGCY_WP:
+                    // abort
+                    gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to contingency WP.");
+                    return true;
+            }
+        }
+    }
 
     if (!check_hover_motors_spinning()&&in_vtol_land_approach()){
         plane.set_mode(plane.mode_loiter, MODE_REASON_VTOL_FAILED_TRANSITION);
@@ -3116,14 +3121,14 @@ bool QuadPlane::verify_vtol_land(void)
         if (!precland_enabled){
             //not turned on in params
             poscontrol.state = QPOS_LAND_DESCEND2;
-            gcs().send_text(MAV_SEVERITY_INFO,"Precland not enabled land descend2 started");
+            gcs().send_text(MAV_SEVERITY_INFO,"Precland disabled, land descend2 started");
         }else{
             poscontrol.state = QPOS_LAND_DESCEND1;
             gcs().send_text(MAV_SEVERITY_INFO,"Land descend1 started");
         }
 #else
         poscontrol.state = QPOS_LAND_DESCEND2;
-        gcs().send_text(MAV_SEVERITY_INFO,"Precland not enabled land descend2 started")
+        gcs().send_text(MAV_SEVERITY_INFO,"Precland disabled, land descend2 started")
 #endif
 
         
