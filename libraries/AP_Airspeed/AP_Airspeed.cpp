@@ -141,14 +141,16 @@ const AP_Param::GroupInfo AP_Airspeed::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("_BUS",  9, AP_Airspeed, param[0].bus, HAL_AIRSPEED_BUS_DEFAULT),
 
-#if AIRSPEED_MAX_SENSORS > 1
+    AP_GROUPINFO("_ERROR",  42, AP_Airspeed, param[0].pressure_error, 25.0f),
+    
+
     // @Param: _PRIMARY
     // @DisplayName: Primary airspeed sensor
     // @Description: This selects which airspeed sensor will be the primary if multiple sensors are found
     // @Values: 0:FirstSensor,1:2ndSensor
     // @User: Advanced
     AP_GROUPINFO("_PRIMARY", 10, AP_Airspeed, primary_sensor, 0),
-#endif
+
 
     // @Param: _OPTIONS
     // @DisplayName: Airspeed options bitmask
@@ -225,7 +227,150 @@ const AP_Param::GroupInfo AP_Airspeed::var_info[] = {
     AP_GROUPINFO("2_BUS",  20, AP_Airspeed, param[1].bus, 1),
 #endif // AIRSPEED_MAX_SENSORS
 
+    AP_GROUPINFO("2_ERROR",  43, AP_Airspeed, param[1].pressure_error, 25.0f),
+
     // Note that 21 is used above by the _OPTIONS parameter.  Do not use 21.
+
+      // @Param: 3_TYPE
+    // @DisplayName: Second Airspeed type
+    // @Description: Type of 3nd airspeed sensor
+    // @Values: 0:None,1:I2C-MS4525D0,2:Analog,3:I2C-MS5525,4:I2C-MS5525 (0x76),5:I2C-MS5525 (0x77),6:I2C-SDP3X,7:I2C-DLVR-5in,8:UAVCAN,9:I2C-DLVR-10in
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("3_TYPE", 22, AP_Airspeed, param[2].type, 0, AP_PARAM_FLAG_ENABLE),
+
+    // @Param: 3_USE
+    // @DisplayName: Enable use of 3nd airspeed sensor
+    // @Description: use airspeed for flight control. When set to 0 airspeed sensor can be logged and displayed on a GCS but won't be used for flight. When set to 1 it will be logged and used. When set to 2 it will be only used when the throttle is zero, which can be useful in gliders with airspeed sensors behind a propeller
+    // @Values: 0:Don't Use,1:use,2:UseWhenZeroThrottle
+    // @User: Standard
+    AP_GROUPINFO("3_USE",    23, AP_Airspeed, param[2].use, 0),
+
+    // @Param: 3_OFFSET
+    // @DisplayName: Airspeed offset for 3nd airspeed sensor
+    // @Description: Airspeed calibration offset
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("3_OFFSET", 24, AP_Airspeed, param[2].offset, 0),
+
+    // @Param: 3_RATIO
+    // @DisplayName: Airspeed ratio for 3nd airspeed sensor
+    // @Description: Airspeed calibration ratio
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("3_RATIO",  25, AP_Airspeed, param[2].ratio, 2),
+
+    // @Param: 3_PIN
+    // @DisplayName: Airspeed pin for 3nd airspeed sensor
+    // @Description: Pin number indicating location of analog airspeed sensors. Pixhawk/Cube if set to 15. 
+    // @User: Advanced
+    AP_GROUPINFO("3_PIN",  26, AP_Airspeed, param[2].pin, 0),
+
+    // @Param: 3_AUTOCAL
+    // @DisplayName: Automatic airspeed ratio calibration for 3nd airspeed sensor
+    // @Description: If this is enabled then the autopilot will automatically adjust the ARSPD_RATIO during flight, based upon an estimation filter using ground speed and true airspeed. The automatic calibration will save the new ratio to EEPROM every 2 minutes if it changes by more than 5%. This option should be enabled for a calibration flight then disabled again when calibration is complete. Leaving it enabled all the time is not recommended.
+    // @User: Advanced
+    AP_GROUPINFO("3_AUTOCAL",  27, AP_Airspeed, param[2].autocal, 0),
+
+    // @Param: 3_TUBE_ORDR
+    // @DisplayName: Control pitot tube order of 3nd airspeed sensor
+    // @Description: This parameter allows you to control whether the order in which the tubes are attached to your pitot tube matters. If you set this to 0 then the top connector on the sensor needs to be the dynamic pressure. If set to 1 then the bottom connector needs to be the dynamic pressure. If set to 2 (the default) then the airspeed driver will accept either order. The reason you may wish to specify the order is it will allow your airspeed sensor to detect if the aircraft it receiving excessive pressure on the static port, which would otherwise be seen as a positive airspeed.
+    // @User: Advanced
+    AP_GROUPINFO("3_TUBE_ORDR",  28, AP_Airspeed, param[2].tube_order, 2),
+
+    // @Param: 3_SKIP_CAL
+    // @DisplayName: Skip airspeed calibration on startup for 2nd sensor
+    // @Description: This parameter allows you to skip airspeed offset calibration on startup, instead using the offset from the last calibration. This may be desirable if the offset variance between flights for your sensor is low and you want to avoid having to cover the pitot tube on each boot.
+    // @Values: 0:Disable,1:Enable
+    // @User: Advanced
+    AP_GROUPINFO("3_SKIP_CAL",  29, AP_Airspeed, param[2].skip_cal, 0),
+
+    // @Param: 2_PSI_RANGE
+    // @DisplayName: The PSI range of the device for 2nd sensor
+    // @Description: This parameter allows you to to set the PSI (pounds per square inch) range for your sensor. You should not change this unless you examine the datasheet for your device
+    // @User: Advanced
+    AP_GROUPINFO("3_PSI_RANGE",  30, AP_Airspeed, param[2].psi_range, PSI_RANGE_DEFAULT),
+
+    // @Param: 2_BUS
+    // @DisplayName: Airspeed I2C bus for 2nd sensor
+    // @Description: The bus number of the I2C bus to look for the sensor on
+    // @Values: 0:Bus0(internal),1:Bus1(external),2:Bus2(auxillary)
+    // @User: Advanced
+    AP_GROUPINFO("3_BUS",  31, AP_Airspeed, param[2].bus, 1),
+
+   
+    AP_GROUPINFO("3_ERROR",  44, AP_Airspeed, param[2].pressure_error, 25.0f),
+
+      // @Param: 4_TYPE
+    // @DisplayName: Second Airspeed type
+    // @Description: Type of 4nd airspeed sensor
+    // @Values: 0:None,1:I2C-MS4525D0,2:Analog,3:I2C-MS5525,4:I2C-MS5525 (0x76),5:I2C-MS5525 (0x77),6:I2C-SDP3X,7:I2C-DLVR-5in,8:UAVCAN,9:I2C-DLVR-10in
+    // @User: Standard
+    AP_GROUPINFO_FLAGS("4_TYPE", 32, AP_Airspeed, param[3].type, 0, AP_PARAM_FLAG_ENABLE),
+    // @Param: 4_USE
+    // @DisplayName: Enable use of 4nd airspeed sensor
+    // @Description: use airspeed for flight control. When set to 0 airspeed sensor can be logged and displayed on a GCS but won't be used for flight. When set to 1 it will be logged and used. When set to 2 it will be only used when the throttle is zero, which can be useful in gliders with airspeed sensors behind a propeller
+    // @Values: 0:Don't Use,1:use,2:UseWhenZeroThrottle
+    // @User: Standard
+    AP_GROUPINFO("4_USE",    33, AP_Airspeed, param[3].use, 0),
+
+    // @Param: 4_OFFSET
+    // @DisplayName: Airspeed offset for 4nd airspeed sensor
+    // @Description: Airspeed calibration offset
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("4_OFFSET", 34, AP_Airspeed, param[3].offset, 0),
+
+    // @Param: 4_RATIO
+    // @DisplayName: Airspeed ratio for 4nd airspeed sensor
+    // @Description: Airspeed calibration ratio
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("4_RATIO",  35, AP_Airspeed, param[3].ratio, 2),
+
+    // @Param: 4_PIN
+    // @DisplayName: Airspeed pin for 4nd airspeed sensor
+    // @Description: Pin number indicating location of analog airspeed sensors. Pixhawk/Cube if set to 15. 
+    // @User: Advanced
+    AP_GROUPINFO("4_PIN",  36, AP_Airspeed, param[3].pin, 0),
+
+    // @Param: 4_AUTOCAL
+    // @DisplayName: Automatic airspeed ratio calibration for 4nd airspeed sensor
+    // @Description: If this is enabled then the autopilot will automatically adjust the ARSPD_RATIO during flight, based upon an estimation filter using ground speed and true airspeed. The automatic calibration will save the new ratio to EEPROM every 2 minutes if it changes by more than 5%. This option should be enabled for a calibration flight then disabled again when calibration is complete. Leaving it enabled all the time is not recommended.
+    // @User: Advanced
+    AP_GROUPINFO("4_AUTOCAL",  37, AP_Airspeed, param[3].autocal, 0),
+
+    // @Param: 4_TUBE_ORDR
+    // @DisplayName: Control pitot tube order of 4nd airspeed sensor
+    // @Description: This parameter allows you to control whether the order in which the tubes are attached to your pitot tube matters. If you set this to 0 then the top connector on the sensor needs to be the dynamic pressure. If set to 1 then the bottom connector needs to be the dynamic pressure. If set to 2 (the default) then the airspeed driver will accept either order. The reason you may wish to specify the order is it will allow your airspeed sensor to detect if the aircraft it receiving excessive pressure on the static port, which would otherwise be seen as a positive airspeed.
+    // @User: Advanced
+    AP_GROUPINFO("4_TUBE_ORDR",  38, AP_Airspeed, param[3].tube_order, 2),
+
+    // @Param: 4_SKIP_CAL
+    // @DisplayName: Skip airspeed calibration on startup for 4nd sensor
+    // @Description: This parameter allows you to skip airspeed offset calibration on startup, instead using the offset from the last calibration. This may be desirable if the offset variance between flights for your sensor is low and you want to avoid having to cover the pitot tube on each boot.
+    // @Values: 0:Disable,1:Enable
+    // @User: Advanced
+    AP_GROUPINFO("4_SKIP_CAL",  39, AP_Airspeed, param[3].skip_cal, 0),
+
+    // @Param: 4_PSI_RANGE
+    // @DisplayName: The PSI range of the device for 4nd sensor
+    // @Description: This parameter allows you to to set the PSI (pounds per square inch) range for your sensor. You should not change this unless you examine the datasheet for your device
+    // @User: Advanced
+    AP_GROUPINFO("4_PSI_RANGE",  40, AP_Airspeed, param[3].psi_range, PSI_RANGE_DEFAULT),
+
+    // @Param: 4_BUS
+    // @DisplayName: Airspeed I2C bus for 4nd sensor
+    // @Description: The bus number of the I2C bus to look for the sensor on
+    // @Values: 0:Bus0(internal),1:Bus1(external),2:Bus2(auxillary)
+    // @User: Advanced
+    AP_GROUPINFO("4_BUS",  41, AP_Airspeed, param[3].bus, 1),
+
+    
+    AP_GROUPINFO("4_ERROR",  45, AP_Airspeed, param[3].pressure_error, 25.0f),
+
+   
+   
+
 
     AP_GROUPEND
 };
@@ -266,6 +411,8 @@ void AP_Airspeed::init()
 
         // Set the enable automatically to false and set the probability that the airspeed is healhy to start with
         state[i].failures.health_probability = 1.0f;
+        state[i].error_neg =1.0f;
+        state[i].error_neg =1.0f;
 
         switch ((enum airspeed_type)param[i].type.get()) {
         case TYPE_NONE:
@@ -327,9 +474,14 @@ float AP_Airspeed::get_pressure(uint8_t i)
     float pressure = 0;
     if (sensor[i]) {
         state[i].healthy = sensor[i]->get_differential_pressure(pressure);
+        if(!state[i].healthy){
+            decay_health(i);
+        }
     }
     return pressure;
 }
+
+
 
 // get a temperature reading if possible
 bool AP_Airspeed::get_temperature(uint8_t i, float &temperature)
@@ -399,6 +551,51 @@ void AP_Airspeed::update_calibration(uint8_t i, float raw_pressure)
     }
     state[i].cal.read_count++;
 }
+
+float AP_Airspeed::get_raw_airspeed(void) const{
+    float health_sum = 0;
+    float airspeed_sum = 0;
+    for (uint8_t j=0; j<AIRSPEED_MAX_SENSORS; j++) {
+        if (healthy(j)){
+            health_sum = health_sum + state[j].failures.health_probability;
+            airspeed_sum = airspeed_sum + state[j].raw_airspeed *state[j].failures.health_probability;
+        }
+    }
+    if(health_sum>0){
+        return airspeed_sum/health_sum;
+    }
+    return 0;
+
+
+
+}
+
+float AP_Airspeed::get_airspeed(void) const{
+    float health_sum = 0;
+    float airspeed_sum = 0;
+    for (uint8_t j=0; j<AIRSPEED_MAX_SENSORS; j++) {
+        if (healthy(j)){
+            health_sum = health_sum + state[j].failures.health_probability;
+            airspeed_sum = airspeed_sum + state[j].airspeed *state[j].failures.health_probability;
+        }
+    }
+    if(health_sum>0){
+        return airspeed_sum/health_sum;
+    }
+    return 0;
+
+
+}
+bool AP_Airspeed::healthy(void) const{
+    for (uint8_t j=0; j<AIRSPEED_MAX_SENSORS; j++) {
+        if (state[j].healthy && (fabsf(param[j].offset) > 0 || state[j].use_zero_offset) && enabled(j)){
+            return true;
+        }
+    }
+    return false;
+}
+
+
 
 // read one airspeed sensor
 void AP_Airspeed::read(uint8_t i)
@@ -486,7 +683,7 @@ void AP_Airspeed::update(bool log)
         }
     }
 
-    check_sensor_failures();
+    check_all_sensor_failures();
 
 #ifndef HAL_BUILD_AP_PERIPH
     if (log) {
@@ -506,8 +703,9 @@ void AP_Airspeed::Log_Airspeed()
         if (!get_temperature(i, temperature)) {
             temperature = 0;
         }
-        struct log_AIRSPEED pkt = {
-            LOG_PACKET_HEADER_INIT(i==0?LOG_ARSP_MSG:LOG_ASP2_MSG),
+        if(i==0){
+            struct log_AIRSPEED pkt = {
+            LOG_PACKET_HEADER_INIT(LOG_ARSP_MSG),
             time_us       : now,
             airspeed      : get_raw_airspeed(i),
             diffpressure  : get_differential_pressure(i),
@@ -518,8 +716,58 @@ void AP_Airspeed::Log_Airspeed()
             healthy       : healthy(i),
             health_prob   : get_health_failure_probability(i),
             primary       : get_primary()
-        };
-        AP::logger().WriteBlock(&pkt, sizeof(pkt));
+            };
+            AP::logger().WriteBlock(&pkt, sizeof(pkt));
+        }
+        else if(i==1){
+            struct log_AIRSPEED pkt = {
+            LOG_PACKET_HEADER_INIT(LOG_ASP2_MSG),
+            time_us       : now,
+            airspeed      : get_raw_airspeed(i),
+            diffpressure  : get_differential_pressure(i),
+            temperature   : (int16_t)(temperature * 100.0f),
+            rawpressure   : get_corrected_pressure(i),
+            offset        : get_offset(i),
+            use           : use(i),
+            healthy       : healthy(i),
+            health_prob   : get_health_failure_probability(i),
+            primary       : get_primary()
+            };
+            AP::logger().WriteBlock(&pkt, sizeof(pkt));
+        }
+        else if(i==2){
+            struct log_AIRSPEED pkt = {
+            LOG_PACKET_HEADER_INIT(LOG_ASP3_MSG),
+            time_us       : now,
+            airspeed      : get_raw_airspeed(i),
+            diffpressure  : get_differential_pressure(i),
+            temperature   : (int16_t)(temperature * 100.0f),
+            rawpressure   : get_corrected_pressure(i),
+            offset        : get_offset(i),
+            use           : use(i),
+            healthy       : healthy(i),
+            health_prob   : get_health_failure_probability(i),
+            primary       : get_primary()
+            };
+            AP::logger().WriteBlock(&pkt, sizeof(pkt));
+        }
+        else{
+            struct log_AIRSPEED pkt = {
+            LOG_PACKET_HEADER_INIT(LOG_ASP3_MSG),
+            time_us       : now,
+            airspeed      : get_raw_airspeed(i),
+            diffpressure  : get_differential_pressure(i),
+            temperature   : (int16_t)(temperature * 100.0f),
+            rawpressure   : get_corrected_pressure(i),
+            offset        : get_offset(i),
+            use           : use(i),
+            healthy       : healthy(i),
+            health_prob   : get_health_failure_probability(i),
+            primary       : get_primary()
+            };
+            AP::logger().WriteBlock(&pkt, sizeof(pkt));
+        }
+        
     }
 }
 

@@ -9,7 +9,7 @@
 class AP_Airspeed_Backend;
 
 #ifndef AIRSPEED_MAX_SENSORS
-#define AIRSPEED_MAX_SENSORS 2
+#define AIRSPEED_MAX_SENSORS 4
 #endif
 
 #ifndef AP_AIRSPEED_AUTOCAL_ENABLE
@@ -59,13 +59,14 @@ public:
     float get_airspeed(uint8_t i) const {
         return state[i].airspeed;
     }
-    float get_airspeed(void) const { return get_airspeed(primary); }
+    float get_airspeed(void) const; // { return get_airspeed(primary); }
 
     // return the unfiltered airspeed in m/s
     float get_raw_airspeed(uint8_t i) const {
         return state[i].raw_airspeed;
     }
-    float get_raw_airspeed(void) const { return get_raw_airspeed(primary); }
+
+    float get_raw_airspeed(void) const;// { return get_raw_airspeed(primary); }
 
     // return the current airspeed ratio (dimensionless)
     float get_airspeed_ratio(uint8_t i) const {
@@ -118,7 +119,7 @@ public:
 #endif
         return ok;
     }
-    bool healthy(void) const { return healthy(primary); }
+    bool healthy(void) const;// { return healthy(primary); }
 
     // return true if all enabled sensors are healthy
     bool all_healthy(void) const;
@@ -170,6 +171,7 @@ private:
         AP_Float offset;
         AP_Float ratio;
         AP_Float psi_range;
+        AP_Float pressure_error;
         AP_Int8  use;
         AP_Int8  type;
         AP_Int8  pin;
@@ -182,6 +184,8 @@ private:
     struct airspeed_state {
         float   raw_airspeed;
         float   airspeed;
+        float   error_pos;
+        float   error_neg;
         float	last_pressure;
         float   filtered_pressure;
         float	corrected_pressure;
@@ -244,8 +248,13 @@ private:
     }
     float get_offset(void) const { return get_offset(primary); }
 
-    void check_sensor_failures();
+    void check_all_sensor_failures();
+    void check_sensor_failures(uint8_t i);
     void check_sensor_ahrs_wind_max_failures(uint8_t i);
+    void check_sensor_values_consistent(uint8_t i);
+    void update_error_estimate(uint8_t i);
+    void decay_health(uint8_t i);
+    void grow_health(uint8_t i);
 
     AP_Airspeed_Backend *sensor[AIRSPEED_MAX_SENSORS];
 
