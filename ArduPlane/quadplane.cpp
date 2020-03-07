@@ -2848,7 +2848,8 @@ bool QuadPlane::verify_vtol_land(void)
     // timeout behaviour, whether to abort or continue
     // currently set that the descend state or later is the point of no return
     // Note: precland.timeout is only valid once it has been reinitialised on transition from QPOS_POSITION2 to QPOS_POSITION3
-    if(poscontrol.state == QPOS_POSITION3){
+#if PRECISION_LANDING == ENABLED
+    if(poscontrol.state == QPOS_POSITION3 && precland_enabled){
 
         if(precland.target_acquired() && precland_descend){
             gcs().send_text(MAV_SEVERITY_INFO, "Precland target found, continuing descent.");
@@ -2868,6 +2869,9 @@ bool QuadPlane::verify_vtol_land(void)
                     // proceed, disable precision landing
                     gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
                     precland_enabled = false;
+                    plane.g2.precland.set_enabled(false);
+                    poscontrol.state = QPOS_LAND_DESCEND2;
+                    
                     break;
                 case ABORT_CONTINUE_CNTGCY_WP:
                     // abort
@@ -2876,6 +2880,7 @@ bool QuadPlane::verify_vtol_land(void)
             }
         }
     }
+#endif
 
     if (poscontrol.state == QPOS_POSITION2 &&
         ((plane.auto_state.wp_distance < descend_radius*0.01) ||
@@ -2911,7 +2916,7 @@ bool QuadPlane::verify_vtol_land(void)
     // search for target
     if (poscontrol.state == QPOS_LAND_DESCEND1 && below_min_precland_search_alt()){
         // if target is acquired and within descending radius, don't pause at search alt
-        if (precland_descend){
+        if (precland_enabled && precland_descend){
             gcs().send_text(MAV_SEVERITY_INFO,"Target found, skipping search stage");
             poscontrol.state = QPOS_LAND_DESCEND2;
         }else{

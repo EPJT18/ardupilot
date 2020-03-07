@@ -799,3 +799,7 @@ bool AC_PrecLand::backed_initialised(void){
     }
     return false;
 }
+
+void AC_PrecLand::set_enabled(bool enabled){
+    _enabled = enabled;
+}
