@@ -591,6 +591,8 @@ void Plane::calc_nav_roll()
 
     nav_roll_cd = constrain_int32(commanded_roll, -roll_limit_cd, roll_limit_cd);
     update_load_factor();
+    update_nav_roll_smoothing();
+    previous_roll_cd = nav_roll_cd;
 }
 
 /*
@@ -608,6 +610,47 @@ void Plane::adjust_nav_pitch_throttle(void)
     }
 }
 
+
+void Plane::update_nav_roll_smoothing(void)
+{
+    uint32_t tnow = AP_HAL::millis();
+    int32_t timeSinceLast = tnow- previous_roll_update_time;
+    
+    if (previous_roll_update_time == 0 || timeSinceLast > 1000) {
+		timeSinceLast = 0;
+	}
+   
+    previous_roll_update_time = tnow;
+    
+    
+    int32_t current_roll_demand = nav_roll_cd;
+    
+
+
+    int32_t stoppingDistance = (nav_roll_rate*nav_roll_rate/(2*rollController.gains.amax*100))*sgn(nav_roll_rate);
+    
+    if(stoppingDistance>current_roll_demand-previous_roll_cd){
+        nav_roll_rate = nav_roll_rate - (rollController.gains.amax*100* timeSinceLast/1000);
+    }
+    else{
+        nav_roll_rate = nav_roll_rate + (rollController.gains.amax* 100*timeSinceLast/1000);
+    }
+
+    nav_roll_rate = constrain_int32(nav_roll_rate, -rollController.gains.rmax*100, rollController.gains.rmax*100);
+   
+
+
+    nav_roll_cd = previous_roll_cd + ((nav_roll_rate*timeSinceLast)/1000);
+
+    nav_roll_cd = constrain_int32(nav_roll_cd, -roll_limit_cd, roll_limit_cd);
+    
+}
+
+int8_t Plane::sgn(int32_t x){
+    if (x > 0) return 1;
+    if (x < 0) return -1;
+    return 0;
+}
 
 /*
   calculate a new aerodynamic_load_factor and limit nav_roll_cd to

@@ -53,9 +53,10 @@ public:
     AP_Float &kD(void) { return gains.D; }
     AP_Float &kFF(void) { return gains.FF; }
 
+    AP_AutoTune::ATGains gains;
+
 private:
     const AP_Vehicle::FixedWing &aparm;
-    AP_AutoTune::ATGains gains;
     AP_AutoTune autotune;
 	uint32_t _last_t;
 	float _last_out;
