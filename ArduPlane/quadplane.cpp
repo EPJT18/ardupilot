@@ -1274,6 +1274,15 @@ float QuadPlane::get_pilot_input_yaw_rate_cds(void) const
     return plane.channel_rudder->get_control_in() * yaw_rate_max / 45;
 }
 
+float QuadPlane::get_yaw_wait_yaw_rate_cds(void)
+{
+    if(vtol_takeoff_yaw_error>0){
+       
+        return yaw_rate_max * 100;
+    }
+    
+    return -yaw_rate_max * 100;
+}
 /*
   get overall desired yaw rate in cd/s
  */
@@ -2390,11 +2399,19 @@ void QuadPlane::takeoff_controller(void)
     plane.nav_roll_cd = pos_control->get_roll();
     plane.nav_pitch_cd = pos_control->get_pitch();
 
+    if(!vtol_takeoff_yaw_wait){
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
                                                                   plane.nav_pitch_cd,
                                                                   get_pilot_input_yaw_rate_cds() + get_weathervane_yaw_rate_cds());
 
     pos_control->set_alt_target_from_climb_rate(wp_nav->get_default_speed_up(), plane.G_Dt, true);
+    }
+    else{
+    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(0,
+                                                                  0,
+                                                                  get_yaw_wait_yaw_rate_cds());
+    pos_control->set_alt_target_from_climb_rate(0, plane.G_Dt, true);
+    }
     run_z_controller();
 }
 
@@ -2496,7 +2513,7 @@ void QuadPlane::init_qrtl(void)
 /*
   start a VTOL takeoff
  */
-bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd)
+bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd,const AP_Mission::Mission_Command& next_cmd)
 {
     if (!setup()) {
         return false;
@@ -2518,7 +2535,9 @@ bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd)
         plane.next_WP_loc.alt = plane.current_loc.alt + cmd.content.location.alt;
     }
     throttle_wait = false;
-
+    vtol_takeoff_yaw_wait = false;
+    vtol_takeoff_target_heading = plane.current_loc.get_bearing_to(next_cmd.content.location);
+    vtol_takeoff_yaw_error =0;
     // set target to current position
     loiter_nav->clear_pilot_desired_acceleration();
     loiter_nav->init_target();
@@ -2620,24 +2639,39 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
         plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TAKEOFF);
         return false;
     }
-
-    if (plane.current_loc.alt < plane.next_WP_loc.alt) {
-        return false;
+    if (plane.current_loc.alt < plane.next_WP_loc.alt && !vtol_takeoff_yaw_wait) {
+            return false;
     }
-    transition_state = is_tailsitter() ? TRANSITION_ANGLE_WAIT_FW : TRANSITION_AIRSPEED_WAIT;
-    plane.TECS_controller.set_pitch_max_limit(transition_pitch_max);
-    set_alt_target_current();
+    vtol_takeoff_yaw_wait = true;
+    int32_t current_heading =(int)degrees(ahrs.yaw)*100;
+    int32_t yaw_error =vtol_takeoff_target_heading- current_heading;
 
-    plane.complete_auto_takeoff();
+    if((abs(yaw_error)>18000)){
+        if(yaw_error>0){
+            yaw_error = yaw_error -36000;
+        }
+        else{
+            yaw_error = 36000 - yaw_error;
+        }
+    }
+    vtol_takeoff_yaw_error = yaw_error;
+    if(abs(yaw_error)<500){
+        transition_state = is_tailsitter() ? TRANSITION_ANGLE_WAIT_FW : TRANSITION_AIRSPEED_WAIT;
+        plane.TECS_controller.set_pitch_max_limit(transition_pitch_max);
+        set_alt_target_current();
 
-    if (plane.control_mode == &plane.mode_auto) {
-        // we reset TECS so that the target height filter is not
-        // constrained by the climb and sink rates from the initial
-        // takeoff height.
-        plane.SpdHgt_Controller->reset();
+        plane.complete_auto_takeoff();
+        vtol_takeoff_yaw_wait = false;
+        if (plane.control_mode == &plane.mode_auto) {
+            // we reset TECS so that the target height filter is not
+            // constrained by the climb and sink rates from the initial
+            // takeoff height.
+            plane.SpdHgt_Controller->reset();
+        }
+        return true;
     }
     
-    return true;
+    return false;
 }
 
 /*
