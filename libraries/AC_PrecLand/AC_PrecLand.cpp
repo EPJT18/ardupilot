@@ -423,43 +423,41 @@ void AC_PrecLand::update_swoop_target_position_cm()
     uint16_t err_index = 0;
     uint16_t cull_counter = 0;
 
-    // if buffer not full, ignore
-    if (_target_history->space()>0){
-        return;
-    }
+    // if buffer not full, don't bother processing
+    if (_target_history->space()==0){
 
-    for (int l=0; l<max_cull_samples; l++){
+        for (int l=0; l<max_cull_samples; l++){
 
-        // get average
-        _ave_target_pos_abs_out_NE = get_buffer_average(_tmp_target_history);
+            // get average
+            _ave_target_pos_abs_out_NE = get_buffer_average(_tmp_target_history);
 
-        // get max error
-        err = Vector2f(0.0f, 0.0f);
-        max_err = Vector2f(0.0f, 0.0f);
-        float err_length;
-        for (uint8_t j=0; j<_tmp_target_history->available(); j++) {
-            const Vector2f *_err_target_data = (*_tmp_target_history)[j];
-            err.x = fabs(_ave_target_pos_abs_out_NE.x - _err_target_data->x);
-            err.y = fabs(_ave_target_pos_abs_out_NE.y - _err_target_data->y);
-            err_length = err.length();
+            // get max error
+            err = Vector2f(0.0f, 0.0f);
+            max_err = Vector2f(0.0f, 0.0f);
+            float err_length;
+            for (uint8_t j=0; j<_tmp_target_history->available(); j++) {
+                const Vector2f *_err_target_data = (*_tmp_target_history)[j];
+                err.x = fabs(_ave_target_pos_abs_out_NE.x - _err_target_data->x);
+                err.y = fabs(_ave_target_pos_abs_out_NE.y - _err_target_data->y);
+                err_length = err.length();
 
-            // update largest error
-            if (err_length > fabs(max_err.length())){
-                err_index = j;
-                max_err.x = err.x;
-                max_err.y = err.y;
+                // update largest error
+                if (err_length > fabs(max_err.length())){
+                    err_index = j;
+                    max_err.x = err.x;
+                    max_err.y = err.y;
+                }
+            }
+
+            // break if acceptable, cull largest error and repeat if not acceptable
+            if (max_err.length()>_acceptable_target_error_cm*0.01f){
+                _tmp_target_history->remove(err_index);
+                cull_counter += 1;
+            }else{
+                _swoop_filter_confident = true;
+                break;
             }
         }
-
-        // break if acceptable, cull largest error and repeat if not acceptable
-        if (max_err.length()>_acceptable_target_error_cm*0.01f){
-            _tmp_target_history->remove(err_index);
-            cull_counter += 1;
-        }else{
-            _swoop_filter_confident = true;
-            break;
-        }
-    }
 
     AP::logger().Write("PLFT", "TimeUS,c,o,valid,cX,cY,aX,aY,e", "QIIIfffff",
                                         AP_HAL::micros64(),
@@ -471,6 +469,7 @@ void AC_PrecLand::update_swoop_target_position_cm()
                                         (float)_ave_target_pos_abs_out_NE.x,
                                         (float)_ave_target_pos_abs_out_NE.y,
                                         (float)max_err.length());
+    }
 }
 
 Vector2f AC_PrecLand::get_buffer_average(ObjectArray<Vector2f> *buffer){
@@ -785,8 +784,8 @@ void AC_PrecLand::run_output_prediction()
 
 bool AC_PrecLand::timeout(void){
 
-    // if timer hasn't been started yet or has been started and since expired
-    if (!(_commence_time == 0) && (AP_HAL::millis() - _commence_time) >= (uint32_t)(_timeout.get()*1000)){
+    // if timer has been started and since expired
+    if ((_commence_time == 0) || (AP_HAL::millis() - _commence_time) >= (uint32_t)(_timeout.get()*1000)){
         return true;
     }else{
         return false;
