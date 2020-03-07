@@ -72,6 +72,8 @@ public:
     // returns true if precision landing is enabled
     bool enabled() const { return _enabled.get(); }
 
+    void set_enabled(bool enabled);
+
     // returns time of last update
     uint32_t last_update_ms() const { return _last_update_ms; }
 
