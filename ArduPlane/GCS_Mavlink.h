@@ -60,6 +60,7 @@ private:
     uint8_t radio_in_rssi() const;
 
     float vfr_hud_airspeed() const override;
+    float get_airspeed(int i ) const override;
     int16_t vfr_hud_throttle() const override;
     float vfr_hud_climbrate() const override;
 
