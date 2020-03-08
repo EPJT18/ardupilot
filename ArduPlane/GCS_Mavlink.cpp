@@ -255,6 +255,9 @@ float GCS_MAVLINK_Plane::vfr_hud_airspeed() const
     return 0;
 }
 
+float GCS_MAVLINK_Plane::get_airspeed(int i ) const{
+    return plane.airspeed.get_airspeed(i);
+}
 int16_t GCS_MAVLINK_Plane::vfr_hud_throttle() const
 {
     return abs(plane.throttle_percentage());
