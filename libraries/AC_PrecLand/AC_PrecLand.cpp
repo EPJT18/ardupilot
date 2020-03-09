@@ -58,9 +58,9 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Param: EST_TYPE
     // @DisplayName: Precision Land Estimator Type
     // @Description: Specifies the estimation method to be used
-    // @Values: 0:RawSensor, 1:KalmanFilter
+    // @Values: 0:RawSensor, 1:KalmanFilter, 2:SwoopFilter
     // @User: Advanced
-    AP_GROUPINFO("EST_TYPE",    5, AC_PrecLand, _estimator_type, 1),
+    AP_GROUPINFO("EST_TYPE",    5, AC_PrecLand, _estimator_type, 2),
 
     // @Param: ACC_P_NSE
     // @DisplayName: Kalman Filter Accelerometer Noise

@@ -175,6 +175,66 @@ class AutoTestQuadPlane(AutoTest):
     def test_parameter_checks(self):
         self.test_parameter_checks_poscontrol("Q_P")
 
+    def test_precision_landing(self):
+
+        # self.set_parameter("PLND_ENABLED", 1)
+        # self.set_parameter("PLND_BUS", -1)
+        # self.set_parameter("PLND_EST_TYPE", 2)
+        # #self.set_parameter("PLND_TACQ_TIMEOUT", 5)
+        # self.set_parameter("PLND_TIMEOUT", 5)
+        # self.set_parameter("PLND_TYPE", 4)
+
+        # self.set_parameter("RNGFND_LANDING", 1)
+        # self.set_parameter("RNGFND1_TYPE", 0)
+        # self.set_parameter("RNGFND1_MIN_CM", 0)
+        # self.set_parameter("RNGFND1_MAX_CM", 6000)
+        # self.set_parameter("RNGFND1_PIN", 0)
+        # self.set_parameter("RNGFND1_SCALING", 12.12)
+
+        self.set_parameter("SIM_PLD_ENABLE", 1)
+        self.set_parameter("SIM_PLD_ALT_LMT", 1000)
+        self.set_parameter("SIM_PLD_DIST_LMT", 1000)
+        self.set_parameter("SIM_PLD_HEIGHT", 300)
+        self.set_parameter("SIM_PLD_LAT", -27.27217982)
+        self.set_parameter("SIM_PLD_LON", 151.30387505)
+        self.set_parameter("SIM_PLD_RATE", 5)
+        #self.set_parameter("SIM_PLD_SUC_RATE", 70)
+        self.set_parameter("SIM_PLD_TYPE", 0)
+
+        
+        #self.load_mission("swoop-precland-mission.txt")
+        self.load_mission("quadplane_precland_proceed_gps_mission.txt")
+        self.mavproxy.send('mode AUTO\n')
+        self.wait_mode('AUTO')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_waypoint(1, 3, max_dist=1000, timeout=1200)
+        self.mav.motors_disarmed_wait()
+        self.mavproxy.send('wp set 4\n')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_waypoint(4, 5, max_dist=1000, timeout=1200)
+        self.mav.motors_disarmed_wait()
+        
+
+
+        
+        # self.set_rc(9, 1000)
+        # self.set_parameter("CHUTE_ENABLED", 1)
+        # self.set_parameter("CHUTE_TYPE", 10)
+        # self.set_parameter("SERVO9_FUNCTION", 27)
+        # self.set_parameter("SIM_PARA_ENABLE", 1)
+        # self.set_parameter("SIM_PARA_PIN", 9)
+
+        # self.load_mission("plane-parachute-mission.txt")
+        # self.mavproxy.send("wp set 1\n")
+        # self.change_mode('AUTO')
+        # self.wait_ready_to_arm()
+        # self.arm_vehicle()
+        # self.mavproxy.expect("BANG")
+        # self.disarm_vehicle(force=True)
+        # self.reboot_sitl()
+
     def default_mode(self):
         return "MANUAL"
 
@@ -192,6 +252,8 @@ class AutoTestQuadPlane(AutoTest):
         ret = super(AutoTestQuadPlane, self).tests()
         ret.extend([
             ("TestMotorMask", "Test output_motor_mask", self.test_motor_mask),
+
+            ("TestPrecisionLanding", "Test Precision Landing", self.test_precision_landing),
 
             ("ParameterChecks",
              "Test Arming Parameter Checks",
