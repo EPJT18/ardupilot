@@ -478,6 +478,23 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     // @User: Standard
     AP_GROUPINFO("ASSIST_ALT", 16, QuadPlane, assist_alt, 0),
 
+    AP_GROUPINFO("BL_H_M_MASK", 17, QuadPlane, bl_hover_motor_mask, 0),
+
+    AP_GROUPINFO("BL_F_M_MASK", 18, QuadPlane, bl_fwd_motor_mask, 0),
+
+    AP_GROUPINFO("BL_LOW_RPM", 19, QuadPlane, bl_lowest_rpm, 100),
+
+    AP_GROUPINFO("BL_STRT_TIME", 20, QuadPlane, bl_startup_time, 2000),
+
+    AP_GROUPINFO("BL_FAIL_TIME", 21, QuadPlane, bl_fail_time, 2000),
+
+    AP_GROUPINFO("M_FAIL_RANGE", 23, QuadPlane, motor_fail_rtl_range, 200),
+
+    AP_GROUPINFO("BL_F_TH_MIN", 24, QuadPlane, bl_fwd_throttle_min_percent, 8),
+
+    AP_GROUPINFO("BL_LOIT_EA", 29, QuadPlane, enable_loiter_on_motor_failure, 0),
+
+
     AP_GROUPEND
 };
 
@@ -883,6 +900,17 @@ void QuadPlane::control_stabilize(void)
     // normal QSTABILIZE mode
     float pilot_throttle_scaled = get_pilot_throttle();
     hold_stabilize(pilot_throttle_scaled);
+    //if idling on the pad and one of the motors hasnt started...
+
+    if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE ){
+        gcs().send_text(MAV_SEVERITY_ERROR, "Hover motor failed - Abort takeoff");
+        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
+        }
+        else{
+            plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+        }     
+    }
 
 }
 
@@ -1701,6 +1729,9 @@ void QuadPlane::update(void)
     if (!setup()) {
         return;
     }
+
+    check_hover_motors_spinning();
+    check_forward_motors_spinning();
 
     if ((ahrs_view != NULL) && !is_equal(_last_ahrs_trim_pitch, ahrs_trim_pitch.get())) {
         _last_ahrs_trim_pitch = ahrs_trim_pitch.get();
@@ -2653,6 +2684,19 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
         plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TAKEOFF);
         return false;
     }
+    //Add detection for failed forward motor start during climbout
+    if (forward_motor_failed) {
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Failed to complete takeoff, forward motor failure");
+        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
+        }
+        else{
+            plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+        }
+        return false;
+
+    }
+
     if (plane.current_loc.alt < plane.next_WP_loc.alt && !vtol_takeoff_yaw_wait) {
             return false;
     }
@@ -2760,6 +2804,130 @@ bool QuadPlane::check_land_final(void)
     return land_detector(6000);
 }
 
+void QuadPlane::check_forward_motors_spinning(void){
+
+if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_percent){
+    first_forward_motor_check_time =0;
+    forward_motor_failed = false;
+}
+
+#ifdef HAVE_AP_BLHELI_SUPPORT
+   
+    uint32_t now = AP_HAL::millis();
+    
+    if(now-first_forward_motor_check_time<bl_startup_time){
+        for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+            if ((((uint8_t)bl_fwd_motor_mask) & (1U<<i))) {
+                bl_last_spinning_packet[i]=now;
+            }
+        }
+        forward_motor_failed = false;
+        return;
+    }
+
+         AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+    if (!blheli) {
+        forward_motor_failed = false;
+        return;
+    }
+    
+    for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+              
+        AP_BLHeli::telem_data td;
+        
+        if (!(((uint8_t)bl_fwd_motor_mask) & (1U<<i))) {
+            continue;
+        }
+        else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
+           
+            if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
+               
+                if (now-time_since_last_forward_blh_warning>4000){
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Forward Motor %d not running!", i+1);
+                    time_since_last_forward_blh_warning = now;
+                }
+                forward_motor_failed = true;
+                return;
+            }
+        }
+        else{
+            bl_last_spinning_packet[i]=now;
+        }
+    }
+   
+    #endif
+
+    forward_motor_failed = false;
+    return;
+  
+}
+
+void QuadPlane::check_hover_motors_spinning(void){
+
+if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN || !plane.arming.is_armed()){    
+    first_hover_motor_check_time =0;
+    hover_motor_failed = false;
+    return;
+}
+
+
+#ifdef HAVE_AP_BLHELI_SUPPORT
+   
+    uint32_t now = AP_HAL::millis();
+    if(now-last_hover_motor_check_time>2000){
+        first_hover_motor_check_time = now;     
+    }
+    last_hover_motor_check_time =now;
+    if(now-first_hover_motor_check_time<bl_startup_time){
+        for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+            if ((((uint8_t)bl_hover_motor_mask) & (1U<<i))) {
+                bl_last_spinning_packet[i]=now;
+            }
+        }
+        hover_motor_failed = false;
+        return;
+    }
+
+        AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+        if (!blheli) {
+            hover_motor_failed = false;
+            return;
+        }
+    
+    for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+              
+        AP_BLHeli::telem_data td;
+        
+        if (!(((uint8_t)bl_hover_motor_mask) & (1U<<i))) {
+            continue;
+            
+        }
+        else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
+           
+            if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
+               
+                if (now-time_since_last_blh_warning>4000){
+                    gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor %d not running!", i+1);
+                    time_since_last_blh_warning = now;
+                }
+
+                hover_motor_failed = true;
+                return;
+            }
+                
+            
+        }
+        else{
+            bl_last_spinning_packet[i]=now;
+        }
+    }
+#endif
+
+hover_motor_failed = false;
+return;
+  
+}
+
 /*
   check if a VTOL landing has completed
  */
@@ -2767,6 +2935,9 @@ bool QuadPlane::verify_vtol_land(void)
 {
     if (!available()) {
         return true;
+    }
+    if (hover_motor_failed&&in_vtol_land_approach() && (enable_loiter_on_motor_failure >0) ){
+        plane.set_mode(plane.mode_loiter, ModeReason::VTOL_FAILED_TRANSITION);
     }
     if (poscontrol.state == QPOS_POSITION2 &&
         plane.auto_state.wp_distance < 2) {

@@ -87,6 +87,8 @@ public:
     bool do_vtol_land(const AP_Mission::Mission_Command& cmd);
     bool verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd);
     bool verify_vtol_land(void);
+    void check_hover_motors_spinning(void);
+    void check_forward_motors_spinning(void);
     bool in_vtol_auto(void) const;
     bool in_vtol_mode(void) const;
     void update_throttle_hover();
@@ -227,6 +229,8 @@ private:
 
     void init_qrtl(void);
     void control_qrtl(void);
+    bool hover_motor_failed;
+    bool forward_motor_failed;
     
     float assist_climb_rate_cms(void) const;
 
@@ -302,6 +306,22 @@ private:
     AP_Int8 enable;
     AP_Int8 transition_pitch_max;
     AP_Int16 max_descend_trig_vel;
+    AP_Int8 bl_hover_motor_mask;
+    AP_Int8 bl_fwd_motor_mask;
+    AP_Int16 bl_lowest_rpm;
+    AP_Int16 bl_startup_time;
+    AP_Int16 bl_fail_time;
+    AP_Int16 enable_loiter_on_motor_failure;
+    AP_Int32 swoop_options;
+    AP_Int16 motor_fail_rtl_range;
+    AP_Int32 bl_last_spinning_packet[8];
+    AP_Int32 last_hover_motor_check_time;
+    AP_Int32 first_hover_motor_check_time;
+    AP_Int32 time_since_last_blh_warning;
+    AP_Int32 last_forward_motor_check_time;
+    AP_Int32 first_forward_motor_check_time;
+    AP_Int32 time_since_last_forward_blh_warning;
+    AP_Int8 bl_fwd_throttle_min_percent;
 
     // control if a VTOL RTL will be used
     AP_Int8 rtl_mode;
