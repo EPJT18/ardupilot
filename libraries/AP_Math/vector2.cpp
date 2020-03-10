@@ -56,7 +56,9 @@ Vector2<T> &Vector2<T>::operator *=(const T num)
 template <typename T>
 Vector2<T> &Vector2<T>::operator /=(const T num)
 {
-    x /= num; y /= num;
+    if(num>FLT_EPSILON){
+        x /= num; y /= num;
+    }
     return *this;
 }
 
@@ -89,7 +91,10 @@ Vector2<T> &Vector2<T>::operator +=(const Vector2<T> &v)
 template <typename T>
 Vector2<T> Vector2<T>::operator /(const T num) const
 {
-    return Vector2<T>(x/num, y/num);
+    if(num>FLT_EPSILON){
+        return Vector2<T>(x/num, y/num);
+    }
+    return *this;
 }
 
 template <typename T>
@@ -132,7 +137,7 @@ template <typename T>
 float Vector2<T>::angle(const Vector2<T> &v2) const
 {
     const float len = this->length() * v2.length();
-    if (len <= 0) {
+    if (len <= FLT_EPSILON) {
         return 0.0f;
     }
     const float cosv = ((*this)*v2) / len;
@@ -210,7 +215,7 @@ bool Vector2<T>::circle_segment_intersection(const Vector2<T>& seg_start, const 
     }
 
     // check for invalid delta (i.e. discriminant)
-    if (delta < 0.0f) {
+    if (delta < FLT_EPSILON || abs(a) < FLT_EPSILON) {
         return false;
     }
 
@@ -252,14 +257,21 @@ bool Vector2<T>::circle_segment_intersection(const Vector2<T>& seg_start, const 
 template <typename T>
 void Vector2<T>::normalize()
 {
-    *this /= length();
+    if(length()>FLT_EPSILON){
+        *this /= length();
+    }
 }
 
 // returns the normalized vector
 template <typename T>
 Vector2<T> Vector2<T>::normalized() const
 {
-    return *this/length();
+    if(length()>FLT_EPSILON){
+        return *this/length();
+    }
+    else{
+        return *this;
+    }
 }
 
 // reflects this vector about n
@@ -275,14 +287,19 @@ void Vector2<T>::reflect(const Vector2<T> &n)
 template <typename T>
 void Vector2<T>::project(const Vector2<T> &v)
 {
-    *this= v * (*this * v)/(v*v);
+    if(v*v>FLT_EPSILON){
+        *this= v * (*this * v)/(v*v);
+    }
 }
 
 // returns this vector projected onto v
 template <typename T>
 Vector2<T> Vector2<T>::projected(const Vector2<T> &v)
 {
-    return v * (*this * v)/(v*v);
+    if(v*v>FLT_EPSILON){
+        return v * (*this * v)/(v*v);
+    }
+    return *this;
 }
 
 // given a position pos_delta and a velocity v1 produce a vector
