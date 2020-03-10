@@ -521,6 +521,7 @@ private:
 
         // how much correction have we added for terrain data
         float terrain_correction;
+        float turn_in_distance;
     } auto_state;
 
     struct {
@@ -599,7 +600,7 @@ private:
     int32_t nav_roll_cd;
     int32_t nav_roll_rate;
     int32_t previous_roll_cd;
-    int32_t previous_roll_update_time;
+    uint32_t previous_roll_update_time;
 
     // The instantaneous desired pitch angle.  Hundredths of a degree
     int32_t nav_pitch_cd;
@@ -964,6 +965,7 @@ private:
     bool in_preLaunch_flight_stage(void);
     void calc_throttle();
     void calc_nav_roll();
+    void calc_nav_roll_auto();
     void calc_nav_pitch();
     void update_flight_stage();
     void update_navigation();
