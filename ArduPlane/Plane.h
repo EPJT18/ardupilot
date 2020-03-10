@@ -105,6 +105,11 @@
 #include <AP_Scripting/AP_Scripting.h>
 #endif
 
+#if PRECISION_LANDING == ENABLED
+#include <AC_PrecLand/AC_PrecLand.h>
+#include <AP_IRLock/AP_IRLock.h>
+#endif
+
 #include "RC_Channel.h"     // RC Channel Library
 #include "Parameters.h"
 #include "avoidance_adsb.h"
@@ -131,6 +136,7 @@ public:
     friend class GCS_Plane;
     friend class RC_Channel_Plane;
     friend class RC_Channels_Plane;
+    friend class AC_PrecLand;
 
     friend class Mode;
     friend class ModeCircle;
@@ -798,6 +804,7 @@ private:
     void Log_Write_Vehicle_Startup_Messages();
     void Log_Write_AOA_SSA();
     void Log_Write_AETR();
+    void Log_Write_Precland();
 
     void load_parameters(void);
     void convert_mixers(void);
@@ -902,6 +909,7 @@ private:
     bool rc_throttle_value_ok(void) const;
     bool rc_failsafe_active(void) const;
     void read_rangefinder(void);
+    bool rangefinder_alt_ok(void);
     void read_airspeed(void);
     void rpm_update(void);
     void init_ardupilot();
@@ -1020,6 +1028,10 @@ private:
 #if SOARING_ENABLED == ENABLED
     void update_soaring();
 #endif
+    
+    // precision_landing.cpp
+    void init_precland();
+    void update_precland();
 
     bool reversed_throttle;
     bool have_reverse_throttle_rc_option;

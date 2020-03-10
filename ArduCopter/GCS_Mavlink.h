@@ -31,6 +31,7 @@ protected:
     MAV_RESULT handle_command_mount(const mavlink_command_long_t &packet) override;
     MAV_RESULT handle_command_int_packet(const mavlink_command_int_t &packet) override;
     MAV_RESULT handle_command_long_packet(const mavlink_command_long_t &packet) override;
+    MAV_RESULT handle_command_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) override;
 
     void handle_mount_message(const mavlink_message_t &msg) override;
 
