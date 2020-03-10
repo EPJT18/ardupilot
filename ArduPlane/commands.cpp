@@ -63,6 +63,7 @@ void Plane::set_next_WP(const struct Location &loc)
     loiter_angle_reset();
 
     setup_glide_slope();
+    nav_controller->start_new_turn();
     setup_turn_angle();
 }
 

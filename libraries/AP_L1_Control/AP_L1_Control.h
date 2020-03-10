@@ -36,6 +36,7 @@ public:
     /* see AP_Navigation.h for the definitions and units of these
      * functions */
     int32_t nav_roll_cd(void) const override;
+    int32_t nav_roll_cd_special(float _amax, float _rmax, float _trimspeed, float _minspeed) override;
     float lateral_acceleration(void) const override;
 
     // return the desired track heading angle(centi-degrees)
@@ -49,7 +50,10 @@ public:
 
     int32_t target_bearing_cd(void) const override;
     float turn_distance(float wp_radius) const override;
-    float turn_distance(float wp_radius, float turn_angle) const override;
+    float turn_distance(float groundspeed, float turn_angle) const override;
+    Vector2f turn_distance_special( const struct Location &current_loc,const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate, const float roll_accel, float _trimspeed, float _minspeed, float current_roll) const override;
+    Vector2f get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, float airspeed) const;
+
     float loiter_radius (const float loiter_radius) const override;
     void update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min = 0.0f) override;
     void update_loiter(const struct Location &center_WP, float radius, int8_t loiter_direction) override;
@@ -57,11 +61,16 @@ public:
     void update_level_flight(void) override;
     bool reached_loiter_target(void) override;
 
+    bool initial_turn_complete(void) override;
+    void start_new_turn(void) override;
     // set the default NAVL1_PERIOD
     void set_default_period(float period) {
         _L1_period.set_default(period);
     }
 
+      float get_auto_nav_bank(){
+        return _auto_bank_limit;
+    }
     void set_data_is_stale(void) override {
         _data_is_stale = true;
     }
@@ -96,12 +105,15 @@ private:
     // bearing angle (radians) to L1 point
     float _nav_bearing;
 
+    bool _initial_turn_complete;
+    float _nav_bearing_special;
     // bearing error angle (radians) +ve to left of track
     float _bearing_error;
 
     // crosstrack error in meters
     float _crosstrack_error;
 
+    float _unsmoothed_bank_angle_cd;
     // target bearing in centi-degrees from last update
     int32_t _target_bearing_cd;
 
@@ -120,8 +132,15 @@ private:
     // For tuning purposes it's helpful to clear the integrator when it changes so a _prev is used
     float _L1_xtrack_i = 0;
     AP_Float _L1_xtrack_i_gain;
+    AP_Float _auto_bank_limit;
+    AP_Float _turn_rate_correction_factor;
+    AP_Float _L1_Auto_Period;
     float _L1_xtrack_i_gain_prev = 0;
     uint32_t _last_update_waypoint_us;
+    uint32_t _last_nav_angle_update_us;
+    uint32_t DebugTimer;
+    int32_t previous_roll_cd;
+    int32_t previous_roll_update_time;
     bool _data_is_stale = true;
 
     AP_Float _loiter_bank_limit;

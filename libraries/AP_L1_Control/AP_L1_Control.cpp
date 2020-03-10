@@ -38,6 +38,32 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FRAME("LIM_BANK",   3, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
 
+       // @Param: AUTO_LIM_BANK
+    // @DisplayName:  Bank Angle for calculating turn in point in auto nav
+    // @Description: Blank
+    // @Units: deg
+    // @Range: 0 89
+    // @User: Advanced
+    AP_GROUPINFO("AUTO_BANK",   4, AP_L1_Control, _auto_bank_limit, 30.0f),
+
+
+    // @Param: Turn Rate correction factor
+	// @DisplayName: Maximum Roll Acceleration
+	// @Description: Maximum Acceleration of Roll rate for nav_rll (deg/s/s). 
+	// @Range: 0.1 2
+	// @Increment: 1
+	// @User: User
+	AP_GROUPINFO("TRCF", 8, AP_L1_Control, _turn_rate_correction_factor,0.625),
+
+    // @Param: Auto_L1_Period
+    // @DisplayName:  integral gain to account for wind speed measurement error
+    // @Description: Blank
+    // @Units: 1/s
+    // @Range: 0 89
+    // @User: Advanced
+    AP_GROUPINFO("A_PERIOD", 9, AP_L1_Control, _L1_Auto_Period, 100.0f),
+
+
     AP_GROUPEND
 };
 
@@ -61,6 +87,15 @@ float AP_L1_Control::get_yaw()
     return _ahrs.yaw;
 }
 
+void AP_L1_Control::start_new_turn(void){
+    
+    _initial_turn_complete = false;
+}
+
+bool AP_L1_Control::initial_turn_complete(void){
+    return _initial_turn_complete;
+}
+
 /*
   Wrap AHRS yaw sensor if in reverse - centi-degress
  */
@@ -76,13 +111,93 @@ int32_t AP_L1_Control::get_yaw_sensor() const
   return the bank angle needed to achieve tracking from the last
   update_*() operation
  */
-int32_t AP_L1_Control::nav_roll_cd(void) const
+int32_t AP_L1_Control::nav_roll_cd() const
 {
     float ret;
     ret = cosf(_ahrs.pitch)*degrees(atanf(_latAccDem * 0.101972f) * 100.0f); // 0.101972 = 1/9.81
     ret = constrain_float(ret, -9000, 9000);
     return ret;
 }
+
+/*
+    return the bank angle needed to achieve tracking from the last update_*() operation
+    Considers
+        - bank limit
+        - roll rate limit
+        - roll accel limit
+
+    A turn is divided into three components:
+        - Transition from 0 roll angle to commanded turn roll angle
+        - Hold commanded turn roll angle
+        - Transition from commanded turn roll angle back to 0 roll angle
+
+    The first and last stages are symmetrical and therefore cover the same amount of distance in the air frame
+ */
+int32_t AP_L1_Control::nav_roll_cd_special(float _amax, float _rmax, float _trimspeed, float _minspeed) 
+{
+    
+    float bank_limit = DEG_TO_RAD*_auto_bank_limit;
+    float roll_rate = DEG_TO_RAD*_rmax; 
+    float roll_accel = DEG_TO_RAD*_amax;
+    float airspeed = 0; 
+    const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
+
+    if(!gotAirspeed || airspeed <  _minspeed){
+        airspeed = _trimspeed; //need to make it a reference to trim speed
+    }
+
+    if(bank_limit< 0.5){
+        bank_limit = 0.5;
+    }
+    
+    if(roll_rate<0.1){
+        roll_rate =0.1;
+    }
+
+    
+    if(roll_accel< (roll_rate*roll_rate/(2.0f*bank_limit))){
+        roll_accel = (roll_rate*roll_rate/(2.0f*bank_limit)) + 0.1;
+    }
+
+    // theta is the heading change between straight flight and full commanded bank angle
+    float theta = (bank_limit*0.5f)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));
+    Vector2f target_ground_velocity =  Vector2f(cosf(_nav_bearing),sinf(_nav_bearing));
+    Vector2f _windspeed_vector = Vector2f(_ahrs.wind_estimate().x, _ahrs.wind_estimate().y);
+    Vector2f target_air_velocity = get_airspeed_from_wind_ground(_windspeed_vector,target_ground_velocity,airspeed);
+
+
+    float _groundspeed_heading_1 = atan2f(_ahrs.groundspeed_vector().y,_ahrs.groundspeed_vector().x);
+    float _ground_turn_angle = wrap_2PI(_nav_bearing-_groundspeed_heading_1+ M_PI)- M_PI;
+    float _airspeed_heading_2 = atan2f(target_air_velocity.y,target_air_velocity.x);
+    float _air_turn_angle = wrap_2PI(_airspeed_heading_2-_ahrs.get_yaw()+ M_PI)- M_PI;
+    
+    // if the best angle to turn in the air frame is different to the ground frame, 
+    // force the air turn to be in the same direction as the ground turn
+    if( _air_turn_angle*_ground_turn_angle<0 && abs(_ground_turn_angle)>M_PI_2 && abs(_air_turn_angle)>0.001 ){
+        _air_turn_angle += -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
+    }
+
+    // If initial acceleration portion of the turn is complete
+    if( abs(_air_turn_angle/theta)<0.75  && !_initial_turn_complete && !_data_is_stale){
+        _initial_turn_complete = true;
+         gcs().send_text(MAV_SEVERITY_INFO, "Initial turn complete  ");
+    }
+
+    float bank_angle;
+
+    if(_initial_turn_complete ){
+        
+        bank_angle = cosf(_ahrs.pitch)*degrees(atanf(_latAccDem * 0.101972f)); // 0.101972 = 1/9.81
+        bank_angle = constrain_float(bank_angle, -_auto_bank_limit, _auto_bank_limit)* 100.0f;
+    }
+    else{
+        bank_angle = (constrain_float(_air_turn_angle/theta,-1.0f,1.0f)* _auto_bank_limit)*100.0f;
+    }
+
+    
+    return (int32_t)bank_angle;
+}
+
 
 /*
   return the lateral acceleration needed to achieve tracking from the last
@@ -125,14 +240,156 @@ float AP_L1_Control::turn_distance(float wp_radius) const
   they have reached the waypoint early, which makes things like camera
   trigger and ball drop at exact positions under mission control much easier
  */
-float AP_L1_Control::turn_distance(float wp_radius, float turn_angle) const
+float AP_L1_Control::turn_distance(float groundspeed, float turn_angle) const
 {
-    float distance_90 = turn_distance(wp_radius);
-    turn_angle = fabsf(turn_angle);
-    if (turn_angle >= 90) {
-        return distance_90;
+    if (turn_angle < 0.1){
+        return 1.0f; // avoid tan(90)
     }
-    return distance_90 * turn_angle / 90.0f;
+    float turn_radius = groundspeed*groundspeed/(10*tanf(radians(_auto_bank_limit)));
+    float turn_distance = turn_radius/tanf(radians((180.0f-abs(turn_angle))*0.5f));
+    return turn_distance;
+}
+
+/*
+  return the turn distance for a given turn angle
+    Considers
+        - bank limit
+        - roll rate limit
+        - roll accel limit
+        - ground velocity frame
+        - air velocity frame
+*/
+Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_loc, const struct Location &turn_WP, const struct Location &next_WP, const float roll_rate_deg, const float roll_accel_deg, float _trimspeed, float _minspeed, float _current_roll) const
+{
+   
+    float bank_limit = DEG_TO_RAD*_auto_bank_limit;
+    float roll_rate = DEG_TO_RAD*roll_rate_deg;
+    float roll_accel = DEG_TO_RAD*roll_accel_deg;
+
+    float airspeed = 1.0f; // should set to trim airspeed
+    const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
+    
+    if(_ahrs.groundspeed_vector().length() < 0.5f){
+        return Vector2f(0.1f,0.1f);
+    }
+    
+    if(!gotAirspeed || airspeed <  _minspeed){
+       return _ahrs.groundspeed_vector().normalized()*10.0f;
+    }
+    
+    if(_ahrs.groundspeed() <2.0f|| turn_WP.get_distance_NE(next_WP).length()<10.0f ){
+        return _ahrs.groundspeed_vector().normalized()* airspeed *2.0f ;
+    }
+
+    //remove any change of divide by zero
+
+    if(bank_limit< 0.5){
+        bank_limit = 0.5;
+    }
+    
+    if(roll_rate<0.1){
+        roll_rate =0.1;
+    }
+
+    if(roll_accel< (roll_rate*roll_rate/(2.0f*bank_limit))){
+        roll_accel = (roll_rate*roll_rate/(2.0f*bank_limit)) + 0.1;
+    }
+
+
+    float theta = _turn_rate_correction_factor*(bank_limit*0.5f)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));
+    Vector2f _groundspeed_vector_1 = _ahrs.groundspeed_vector();
+    Vector2f _windspeed_vector = Vector2f(_ahrs.wind_estimate().x, _ahrs.wind_estimate().y);
+    Vector2f _airspeed_vector_1 = _groundspeed_vector_1 - _windspeed_vector;
+    Vector2f _groundspeed_vector_2 = turn_WP.get_distance_NE(next_WP);
+    Vector2f _airspeed_vector_2 = get_airspeed_from_wind_ground(_windspeed_vector, _groundspeed_vector_2, airspeed);
+
+
+    //catches case where we have to turn more than 180 degrees in air frame
+    float _groundspeed_heading_1 = atan2f(_groundspeed_vector_1.y,_groundspeed_vector_1.x);
+    float _groundspeed_heading_2 = atan2f(_groundspeed_vector_2.y,_groundspeed_vector_2.x);
+    float _ground_turn_angle = wrap_2PI(_groundspeed_heading_2-_groundspeed_heading_1+ M_PI)- M_PI;
+    float _airspeed_heading_1 = atan2f(_airspeed_vector_1.y,_airspeed_vector_1.x);
+    float _airspeed_heading_2 = atan2f(_airspeed_vector_2.y,_airspeed_vector_2.x);
+    float _air_turn_angle = wrap_2PI(_airspeed_heading_2-_airspeed_heading_1+ M_PI)- M_PI;
+    
+    //fix the divide by zero nonesense (your turn is near strait anyway)
+    if(abs(_air_turn_angle)<0.02 || abs(_ground_turn_angle)<0.02){
+       return _ahrs.groundspeed_vector() *2.0f;
+    }
+
+    //reduce the distance if you are already rolled the correct direction
+    Vector2f turn_distance_extra = Vector2f(0.0f,0.0f);
+    
+    if (_current_roll *_air_turn_angle<0.0f){
+        float turn_rate = 0.65*_turn_rate_correction_factor*bank_limit*((6*GRAVITY_MSS)/(5*airspeed));
+        turn_distance_extra =_ahrs.groundspeed_vector().normalized()*(1+abs(_current_roll)/bank_limit)*(theta/turn_rate) *_ahrs.groundspeed();
+    }
+    theta = (1 - (0.5*abs(_current_roll)/bank_limit))*theta;
+    
+    // If there is no constant roll portion of the turn
+    if(abs(_air_turn_angle) <  2*theta ){
+        
+        float turnRadius= sq(_ahrs.groundspeed_vector().length())/(GRAVITY_MSS*tanf(bank_limit*0.5f));
+        float turnDistanceScalar = 2*turnRadius/tanf((M_PI-abs(_air_turn_angle))*0.5f);
+        if(turnDistanceScalar < _ahrs.groundspeed()*2.0){
+            turnDistanceScalar = _ahrs.groundspeed()*2.0f;
+        } 
+        Vector2f turnDistanceReturn  = _ahrs.groundspeed_vector().normalized()*turnDistanceScalar;
+        
+        turnDistanceReturn = turnDistanceReturn + turn_distance_extra;
+        
+        return turnDistanceReturn;
+    }
+
+    // if the best angle to turn in the air frame is different to the ground frame, 
+    // force the air turn to be in the same direction as the ground turn
+    if(_air_turn_angle*_ground_turn_angle<0 ){
+        _air_turn_angle += -(abs(_air_turn_angle)/_air_turn_angle)*(M_PI*2);
+    }
+    
+    Vector2f _airspeed_vector_1_normalized = _airspeed_vector_1.normalized();
+    Vector2f perp_airspeed_vector_1 = Vector2f(-_airspeed_vector_1_normalized.y, _airspeed_vector_1_normalized.x); // perpendicular airspeed vector
+    // set direction of perpendicular airspeed vector based on turn direction
+    if(_air_turn_angle<0.0f){
+        perp_airspeed_vector_1 = -perp_airspeed_vector_1;
+    }
+          
+    float beta = abs(_air_turn_angle);
+    Vector2f turnDistanceXY = ( (perp_airspeed_vector_1* (2-cosf(theta) + cosf(beta-theta) -(2*cosf(beta)))) + (_airspeed_vector_1_normalized*(sinf(theta)-sinf(beta-theta)+(2*sinf(beta)))));
+    turnDistanceXY = turnDistanceXY*((5*sq(airspeed))/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor));
+
+    float turnTimealphaPortion = ((5*airspeed)/(6*GRAVITY_MSS*bank_limit*_turn_rate_correction_factor))*(abs(_air_turn_angle)-(2*theta));
+    float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
+    float turnTime = turnTimealphaPortion + turnTimeThetaPortion;
+
+    turnDistanceXY = turnDistanceXY + (_windspeed_vector*turnTime)+turn_distance_extra;
+
+    return turnDistanceXY;
+
+}
+
+/*
+    return velocity vector in air frame
+ */
+Vector2f AP_L1_Control::get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, const float airspeed) const
+{
+    if (ground.length()<2.0f || airspeed<2.0f){
+        return ground;
+    }
+    Vector2f G = ground.normalized();
+    Vector2f WindInTrack = wind;
+    WindInTrack = ground * (WindInTrack * ground)/(ground*ground);       
+    Vector2f C = WindInTrack - wind;
+    float magC = C.length();
+    Vector2f A = Vector2f();
+
+    if(airspeed>magC){
+        A = G*sqrtf(sq(airspeed)- sq(magC)) +C;
+    }
+    else{
+        A = -wind.normalized()*airspeed;
+    }
+    return A;
 }
 
 float AP_L1_Control::loiter_radius(const float radius) const
@@ -238,7 +495,12 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     // Calculate time varying control parameters
     // Calculate the L1 length required for specified period
     // 0.3183099 = 1/1/pipi
-    _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+    if(!_initial_turn_complete){
+        _L1_dist =  MAX(0.3183099f * _L1_damping * _L1_Auto_Period * groundSpeed, dist_min);
+    }
+    else{
+        _L1_dist =  MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+    }
 
     // Calculate the NE position of WP B relative to WP A
     Vector2f AB = prev_WP.get_distance_NE(next_WP);
@@ -305,6 +567,9 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
             // an AHRS_TRIM_X=0.1 will drift to about 0.08 so 0.1 is a good worst-case to clip at
             _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);
+        }
+        else{ // reset integrator if L1 angle is greater than 20 degrees
+            _L1_xtrack_i = 0;
         }
 
         // to converge to zero we must push Nu1 harder

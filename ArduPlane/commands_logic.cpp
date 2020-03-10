@@ -640,18 +640,32 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         }
         return false;
     }
-
-    float acceptance_distance_m = 0; // default to: if overflown - let it fly up to the point
+    Vector2f acceptance_distance_m = Vector2f(0,0); // default to: if overflown - let it fly up to the point
     if (cmd_acceptance_distance > 0) {
         // allow user to override acceptance radius
-        acceptance_distance_m = cmd_acceptance_distance;
-    } else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
-    } else {
+        acceptance_distance_m = ahrs.groundspeed_vector().normalized()*cmd_acceptance_distance;
+    } 
 
+    else if (cmd_passby == 0) {
+        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax,TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min, ahrs.roll );
     }
     
-    if (auto_state.wp_distance <= acceptance_distance_m) {
+
+    if(cmd.content.location.get_distance_NE(mission.get_next_location(cmd.content.location)).length()<1.0f || plane.current_loc.get_distance_NE(cmd.content.location).length()<1.0f || acceptance_distance_m.length()<0.05 ){
+        gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
+                          (unsigned)mission.get_current_nav_cmd().index,
+                          (unsigned)current_loc.get_distance(flex_next_WP_loc));
+        return true;
+    }
+    
+    const Vector2f PlaneRelToWaypoint = -plane.current_loc.get_distance_NE(cmd.content.location);
+    const Vector2f lineToIntersect = cmd.content.location.get_distance_NE(mission.get_next_location(cmd.content.location)).normalized()*(acceptance_distance_m.length()+ PlaneRelToWaypoint.length()); //this scalar just makes sures the plane cant go arround the line
+    const Vector2f line2 = PlaneRelToWaypoint+acceptance_distance_m;
+    Vector2f returnValue = Vector2f(0,0);
+    Vector2f zeroVector = Vector2f(0,0);
+    const bool doesIntersect = Vector2f::segment_intersection(lineToIntersect,zeroVector,PlaneRelToWaypoint,line2,returnValue);
+
+    if (    doesIntersect) {
         gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
                           (unsigned)mission.get_current_nav_cmd().index,
                           (unsigned)current_loc.get_distance(flex_next_WP_loc));
