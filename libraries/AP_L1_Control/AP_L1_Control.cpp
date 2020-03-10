@@ -268,12 +268,19 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
 
     float airspeed = 1.0f; // should set to trim airspeed
     const bool gotAirspeed = _ahrs.airspeed_estimate_true(&airspeed);
+    
+    if(_ahrs.groundspeed_vector().length() < 0.5f){
+        return Vector2f(0.1f,0.1f);
+    }
+    
     if(!gotAirspeed || airspeed <  _minspeed){
        return _ahrs.groundspeed_vector().normalized()*10.0f;
     }
-    if(_ahrs.groundspeed() <2.0f  ){
+    
+    if(_ahrs.groundspeed() <2.0f|| turn_WP.get_distance_NE(next_WP).length()<10.0f ){
         return _ahrs.groundspeed_vector().normalized()* airspeed *2.0f ;
     }
+
     //remove any change of divide by zero
 
     if(bank_limit< 0.5){
@@ -366,7 +373,9 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
  */
 Vector2f AP_L1_Control::get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, const float airspeed) const
 {
-
+    if (ground.length()<2.0f || airspeed<2.0f){
+        return ground;
+    }
     Vector2f G = ground.normalized();
     Vector2f WindInTrack = wind;
     WindInTrack = ground * (WindInTrack * ground)/(ground*ground);       

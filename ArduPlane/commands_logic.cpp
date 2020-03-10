@@ -651,7 +651,12 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
     }
     
 
-    
+    if(cmd.content.location.get_distance_NE(mission.get_next_location(cmd.content.location)).length()<1.0f || plane.current_loc.get_distance_NE(cmd.content.location).length()<1.0f || acceptance_distance_m.length()<0.05 ){
+        gcs().send_text(MAV_SEVERITY_INFO, "Reached waypoint #%i dist %um",
+                          (unsigned)mission.get_current_nav_cmd().index,
+                          (unsigned)current_loc.get_distance(flex_next_WP_loc));
+        return true;
+    }
     
     const Vector2f PlaneRelToWaypoint = -plane.current_loc.get_distance_NE(cmd.content.location);
     const Vector2f lineToIntersect = cmd.content.location.get_distance_NE(mission.get_next_location(cmd.content.location)).normalized()*(acceptance_distance_m.length()+ PlaneRelToWaypoint.length()); //this scalar just makes sures the plane cant go arround the line
