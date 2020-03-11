@@ -69,13 +69,6 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("ACC_P_NSE", 6, AC_PrecLand, _accel_noise, 2.5f),
 
-    // @Param: COV_THRESH
-    // @DisplayName: Kalman Filter Covariance Threshold
-    // @Description: Kalman Filter Covariance Threshold, represents an acceptable confidence of target location to begin descent
-    // @Values: 0.001 0.1
-    // @User: Advanced
-    AP_GROUPINFO("COV_THRESH",    7, AC_PrecLand, _covariance_threshold, 0.01f),
-
     // @Param: CAM_POS_X
     // @DisplayName: Camera X position offset
     // @Description: X position of the camera in body frame. Positive X is forward of the origin.
@@ -110,11 +103,11 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Units: s
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("LAG", 10, AC_PrecLand, _lag, 0.02f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
+    AP_GROUPINFO("LAG", 10, AC_PrecLand, _lag, 0.2f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
 
     // @Param: TACQ_TIM
     // @DisplayName: Target Aquired Timeout
-    // @Description: Time until EKF estimate resets if target not seen
+    // @Description: Time until estimate resets if target not seen
     // @Range: 2 20
     // @Increment: 1
     // @Units: s
@@ -131,34 +124,15 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("NUM_SMP", 12, AC_PrecLand, _num_ave_samples, 10),
 
-    // @Param: OUT_LNGTH
-    // @DisplayName: Outlier length threshold
-    // @Description: Outlier length threshold
-    // @Range: 100 1000
-    // @Increment: 1
-    // @Units: cm
-    // @User: Advanced
-    // @RebootRequired: True
-    AP_GROUPINFO("OUT_LNGTH", 13, AC_PrecLand, _outlier_length_cm, 100),
-
-    // @Param: OUT_NUM
-    // @DisplayName: Max number of outliers before filter reset
-    // @Description: Max number of outliers before filter reset
-    // @Range: 4 50
-    // @Increment: 1
-    // @User: Advanced
-    // @RebootRequired: True
-    AP_GROUPINFO("OUT_NUM", 14, AC_PrecLand, _max_outliers, 5),
-
     // @Param: TIMEOUT
     // @DisplayName: Precision Landing timeout
-    // @Description: How long to wait to capture target before giving up. 
-    // @Range: 0 20
+    // @Description: How long to wait to capture target at MIN_SRC_ALT before giving up. 
+    // @Range: 0 60
     // @Increment: 1
     // @Units: s
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("TIMEOUT", 15, AC_PrecLand, _timeout, 5),
+    AP_GROUPINFO("TIMEOUT", 13, AC_PrecLand, _timeout, 5),
 
     // @Param: DN_SPD_MIN
     // @DisplayName: Precland minimum descend speed
@@ -168,7 +142,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Increment: 1
     // @User: Standard
 
-    AP_GROUPINFO("DN_SPD_MIN", 16, AC_PrecLand, _land_speed_min_cms, 50),
+    AP_GROUPINFO("DN_SPD_MIN", 14, AC_PrecLand, _land_speed_min_cms, 50),
 
     // @Param: MAX_POS_ERR
     // @DisplayName: Acceptable pos error
@@ -177,7 +151,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Range: 10 1000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MAX_POS_ERR", 17, AC_PrecLand, _acceptable_error_cm, 100),
+    AP_GROUPINFO("MAX_POS_ERR", 15, AC_PrecLand, _acceptable_error_cm, 100),
 
     // @Param: MIN_SRC_ALT
     // @DisplayName: Acceptable pos error
@@ -186,7 +160,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Range: 10 100
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MIN_SRC_ALT", 18, AC_PrecLand, _min_search_alt, 40),
+    AP_GROUPINFO("MIN_SRC_ALT", 16, AC_PrecLand, _min_search_alt, 40),
 
     // @Param: MAX_TGT_ERR
     // @DisplayName: Acceptable target estimate error
@@ -195,7 +169,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Range: 10 1000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MAX_TGT_ERR", 19, AC_PrecLand, _acceptable_target_error_cm, 100),
+    AP_GROUPINFO("MAX_TGT_ERR", 17, AC_PrecLand, _acceptable_target_error_cm, 100),
 
     // @Param: MAX_PCT_OTL
     // @DisplayName: Acceptable outlier cull percentage
@@ -204,7 +178,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Increment: 0.01
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("MAX_PCT_OTL", 20, AC_PrecLand, _max_cull_pct, 0.3),
+    AP_GROUPINFO("MAX_PCT_OTL", 18, AC_PrecLand, _max_cull_pct, 0.3),
 
     AP_GROUPEND
 };
@@ -298,7 +272,6 @@ void AC_PrecLand::start_search_timer(void){
 
 void AC_PrecLand::reset_swoop_filter(void){
     //swoop filter
-    _cnt=0;
     _outliers=0;
     _update_swoop_filt = false;
     _target_history->clear();
@@ -517,16 +490,6 @@ float AC_PrecLand::get_target_distance_scalar(void)
     return norm(_target_pos_rel_out_NE.x, _target_pos_rel_out_NE.y)*100.0f;
 }
 
-float AC_PrecLand::get_ekf_x_cov()
-{
-    return _ekf_x.getPosCovariance();
-}
-
-float AC_PrecLand::get_ekf_y_cov()
-{
-    return _ekf_y.getPosCovariance();
-}
-
 uint32_t AC_PrecLand::get_lag(void)
 {
     return _backend->get_lag();
@@ -658,11 +621,7 @@ bool AC_PrecLand::target_pos_confident()
             return true;
         }
         case ESTIMATOR_TYPE_KALMAN_FILTER: {
-            if (get_ekf_x_cov() < _covariance_threshold &&
-                get_ekf_y_cov() < _covariance_threshold)
-            {
-                return true;
-            }
+            return true;
         }
     }    
     return false;

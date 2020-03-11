@@ -174,8 +174,6 @@ struct PACKED log_Precland {
     float meas_x;
     float meas_y;
     float meas_z;
-    float cov_x;
-    float cov_y;
     uint32_t last_meas;
     uint32_t ekf_outcount;
     uint8_t estimator;
@@ -194,8 +192,6 @@ void Plane::Log_Write_Precland()
     Vector2f target_pos_abs = Vector2f(0.0f,0.0f);
     g2.precland.get_target_position_relative_cm(target_pos_abs);
     g2.precland.get_target_position_measurement_cm(target_pos_meas);
-    float x_cov = g2.precland.get_ekf_x_cov(); 
-    float y_cov = g2.precland.get_ekf_y_cov();
 
     struct log_Precland pkt = {
         LOG_PACKET_HEADER_INIT(LOG_PRECLAND_MSG),
@@ -207,8 +203,6 @@ void Plane::Log_Write_Precland()
         meas_x          : target_pos_meas.x,
         meas_y          : target_pos_meas.y,
         meas_z          : target_pos_meas.z,
-        cov_x           : x_cov,
-        cov_y           : y_cov,
         last_meas       : g2.precland.last_update_ms(),
         ekf_outcount    : g2.precland.ekf_outlier_count(),
         estimator       : g2.precland.estimator_type()
@@ -333,7 +327,7 @@ const struct LogStructure Plane::log_structure[] = {
       "AETR", "Qhhhhh",  "TimeUS,Ail,Elev,Thr,Rudd,Flap", "s-----", "F-----" },
 #if PRECISION_LANDING == ENABLED
     { LOG_PRECLAND_MSG, sizeof(log_Precland),
-      "PL",    "QBBfffffffIIB",    "TimeUS,Heal,TAcq,pX,pY,mX,mY,mZ,covX,covY,LastMeasUS,EKFOutl,Est", "s--ddddm--s--","F--0000B00C--" },
+      "PL",    "QBBfffffIIB",    "TimeUS,Heal,TAcq,pX,pY,mX,mY,mZ,LastMeasUS,EKFOutl,Est", "s--ddddms--","F--00000C--" },
 #endif
 };
 

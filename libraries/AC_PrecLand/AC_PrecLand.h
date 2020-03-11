@@ -183,19 +183,17 @@ private:
     AP_Vector3f                 _cam_offset;        // Position of the camera relative to the CG
     AP_Int8                     _timeout;           // Target search timeout
     AP_Int8                     _tacq_timeout;      // Time until EKF estimate resets if target not seen
-    AP_Int16                    _num_ave_samples;
-    AP_Int16                    _outlier_length_cm;
-    AP_Int16                    _max_outliers;
+    AP_Int16                    _num_ave_samples;   // Swoop filter averaging buffer length
     AP_Int16                    _min_search_alt;    // Alt where precision landing timer begins
     AP_Int16                    _acceptable_target_error_cm; // Max error the estimate buffer can have before becoming invalid
     AP_Float                    _max_cull_pct;      // Max percentage of the buffer that are considered outliers before the estimate becomes invalid
 
-    bool                        _update_swoop_filt; // Only update swoop filter on new LOS
-    Vector2f                    _target_pos_abs_meas_NE;
-    Vector2f                    _ave_target_pos_abs_out_NE;
-    uint32_t                    _cnt;
-    uint32_t                    _outliers;
-    bool                        _swoop_filter_confident;
+    // Swoop Filter
+    bool                        _update_swoop_filt;         // Only update swoop filter on new LOS
+    Vector2f                    _target_pos_abs_meas_NE;    // Most recent absolute target measurement
+    Vector2f                    _ave_target_pos_abs_out_NE; // Averaged absolute target measurement, updated each LOS
+    uint32_t                    _outliers;                  // Number of outliers culled
+    bool                        _swoop_filter_confident;    // Is the averaged estimate confident?
 
     AP_Int16                    _land_speed_min_cms;// Minimum descent speed if outside of acceptable position error
     AP_Int16                    _acceptable_error_cm; // Acceptable position error before descent must be slowed
@@ -207,7 +205,6 @@ private:
 
     PosVelEKF                   _ekf_x, _ekf_y;     // Kalman Filter for x and y axis
     uint32_t                    _outlier_reject_count;  // mini-EKF's outlier counter (3 consecutive outliers lead to EKF accepting updates)
-    AP_Float                    _covariance_threshold; // EKF covariance confidence threshold
 
     Vector3f                    _target_pos_rel_meas_NED; // target's relative position as 3D vector
 
