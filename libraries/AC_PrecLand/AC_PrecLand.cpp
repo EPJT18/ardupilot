@@ -189,6 +189,17 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("MAX_PCT_OTL", 19, AC_PrecLand, _max_cull_pct, 0.3),
 
+    // @Param: MAX_TGT_DST
+    // @DisplayName: Max Target Distance
+    // @Description: Maximum distance a target can be from the vehicle and be accepted (beware includes height)
+    // @Range: 0 200
+    // @Increment: 0.01
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("MAX_TGT_DST", 20, AC_PrecLand, _max_target_distance, 100),
+
+
+
     AP_GROUPEND
 };
 
@@ -690,8 +701,10 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
 
             // Compute target position relative to IMU
             _target_pos_rel_meas_NED = Vector3f(target_vec_unit_ned.x*dist, target_vec_unit_ned.y*dist, alt) + cam_pos_ned;
+
+         
             
-            AP::logger().Write("PLCL", "TimeUS,ts,bX,bY,bZ,nX,nY,nZ,tX,tY,tZ", "QIfffffffff",
+            AP::logger().Write("PLCL", "TimeUS,ts,bX,bY,bZ,nX,nY,nZ,tX,tY,tZ,tL", "QIffffffffff",
                                         AP_HAL::micros64(),
                                         (uint32_t)inertial_data_delayed->time_usec,
                                         (float)target_vec_unit_body.x,
@@ -702,7 +715,11 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
                                         (float)target_vec_unit_ned.z,
                                         (float)_target_pos_rel_meas_NED.x,
                                         (float)_target_pos_rel_meas_NED.y,
-                                        (float)_target_pos_rel_meas_NED.z);
+                                        (float)_target_pos_rel_meas_NED.z,
+                                        (float)_target_pos_rel_meas_NED.length());
+            if( _target_pos_rel_meas_NED.length()> _max_target_distance) {
+                return false;
+            }                    
             return true;
         }
     }

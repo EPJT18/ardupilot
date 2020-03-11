@@ -194,6 +194,7 @@ private:
     AP_Int16                    _min_abort_alt;     // If timeout above this alt, abort
     AP_Int16                    _acceptable_target_error_cm; // Max error the estimate buffer can have before becoming invalid
     AP_Float                    _max_cull_pct;      // Max percentage of the buffer that are considered outliers before the estimate becomes invalid
+    AP_Float                    _max_target_distance;   //Maximum distance a target can be from the vehicle and be accepted (beware includes height)
 
     // Swoop Filter
     bool                        _update_swoop_filt;         // Only update swoop filter on new LOS
