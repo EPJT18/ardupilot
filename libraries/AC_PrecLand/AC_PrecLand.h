@@ -127,6 +127,9 @@ public:
     // returns true when the landing target has been detected
     bool target_acquired();
 
+    // returns true if the target has been found since an init
+    bool has_been_confident();
+
     // get the lag of the most recent packet
     uint32_t get_lag();
 
@@ -135,6 +138,9 @@ public:
 
     // returns true when we are confident of the target's position
     bool target_pos_confident(void);
+
+    // returns true if the plane is in a state where it is ok to abort a landing
+    bool can_abort(float hagl);
 
     void start_search_timer(void);
 
@@ -185,6 +191,7 @@ private:
     AP_Int8                     _tacq_timeout;      // Time until EKF estimate resets if target not seen
     AP_Int16                    _num_ave_samples;   // Swoop filter averaging buffer length
     AP_Int16                    _min_search_alt;    // Alt where precision landing timer begins
+    AP_Int16                    _min_abort_alt;     // If timeout above this alt, abort
     AP_Int16                    _acceptable_target_error_cm; // Max error the estimate buffer can have before becoming invalid
     AP_Float                    _max_cull_pct;      // Max percentage of the buffer that are considered outliers before the estimate becomes invalid
 
@@ -194,6 +201,7 @@ private:
     Vector2f                    _ave_target_pos_abs_out_NE; // Averaged absolute target measurement, updated each LOS
     uint32_t                    _outliers;                  // Number of outliers culled
     bool                        _swoop_filter_confident;    // Is the averaged estimate confident?
+    bool                        _swoop_has_been_confident;  // has the swoop filter been confident since the last init
 
     AP_Int16                    _land_speed_min_cms;// Minimum descent speed if outside of acceptable position error
     AP_Int16                    _acceptable_error_cm; // Acceptable position error before descent must be slowed

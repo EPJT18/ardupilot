@@ -1211,7 +1211,7 @@ bool QuadPlane::precland_active(void) const
 
     return precland.enabled() && 
             pos_control->is_active_xy() && 
-            precland.target_acquired() && 
+            precland.has_been_confident() && 
             precland.swoop_filter_ready();
 #else
     return false;
@@ -2849,14 +2849,16 @@ bool QuadPlane::verify_vtol_land(void)
     // currently set that the descend state or later is the point of no return
     // Note: precland.timeout is only valid once it has been reinitialised on transition from QPOS_POSITION2 to QPOS_POSITION3
 #if PRECISION_LANDING == ENABLED
-    if(poscontrol.state == QPOS_POSITION3 && precland_enabled){
+    float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
+    if(poscontrol.state >= QPOS_POSITION3 && precland_enabled){
 
         if(precland.target_acquired() && precland_descend){
             gcs().send_text(MAV_SEVERITY_INFO, "Precland target found, continuing descent.");
             poscontrol.state = QPOS_LAND_DESCEND2;
         }
 
-        if(precland.timeout()){
+        if((poscontrol.state == QPOS_POSITION3 && precland.timeout()) || // if searching at POS3
+           (poscontrol.state >= QPOS_LAND_DESCEND2 && !precland.target_acquired() && precland.can_abort(height_above_ground))){ // If have found and are descending DESCEND2
             switch(qland_behaviour){
                 
                 case PLND_DISABLED:
@@ -2868,8 +2870,6 @@ bool QuadPlane::verify_vtol_land(void)
                 case PROCEED_GPS_LAND:
                     // proceed, disable precision landing
                     gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
-                    precland_enabled = false;
-                    plane.g2.precland.set_enabled(false);
                     poscontrol.state = QPOS_LAND_DESCEND2;
                     
                     break;

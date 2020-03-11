@@ -154,13 +154,22 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     AP_GROUPINFO("MAX_POS_ERR", 15, AC_PrecLand, _acceptable_error_cm, 100),
 
     // @Param: MIN_SRC_ALT
-    // @DisplayName: Acceptable pos error
-    // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
+    // @DisplayName: Minimum Search Alt
+    // @Description: If the target has not been seen and the vehicle has descended to this alt, stop and search for PLND_TACQ_TIM seconds
     // @Units: m
     // @Range: 10 100
     // @Increment: 1
     // @User: Standard
     AP_GROUPINFO("MIN_SRC_ALT", 16, AC_PrecLand, _min_search_alt, 40),
+
+    // @Param: MIN_ABRT_ALT
+    // @DisplayName: Minimum Abort Alt
+    // @Description: If the target is lost (ie PLND_TACQ_TIM expires) below this alt, continue with last target position estimate. Else abort. 
+    // @Units: m
+    // @Range: 10 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MIN_ABT_ALT", 17, AC_PrecLand, _min_abort_alt, 15),
 
     // @Param: MAX_TGT_ERR
     // @DisplayName: Acceptable target estimate error
@@ -169,7 +178,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Range: 10 1000
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MAX_TGT_ERR", 17, AC_PrecLand, _acceptable_target_error_cm, 100),
+    AP_GROUPINFO("MAX_TGT_ERR", 18, AC_PrecLand, _acceptable_target_error_cm, 100),
 
     // @Param: MAX_PCT_OTL
     // @DisplayName: Acceptable outlier cull percentage
@@ -178,7 +187,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Increment: 0.01
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("MAX_PCT_OTL", 18, AC_PrecLand, _max_cull_pct, 0.3),
+    AP_GROUPINFO("MAX_PCT_OTL", 19, AC_PrecLand, _max_cull_pct, 0.3),
 
     AP_GROUPEND
 };
@@ -273,6 +282,7 @@ void AC_PrecLand::start_search_timer(void){
 void AC_PrecLand::reset_swoop_filter(void){
     //swoop filter
     _outliers=0;
+    _swoop_has_been_confident = false;
     _update_swoop_filt = false;
     _target_history->clear();
 }
@@ -325,6 +335,11 @@ bool AC_PrecLand::target_acquired()
 {
     _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < (uint8_t)_tacq_timeout*1000.0f;
     return _target_acquired;
+}
+
+bool AC_PrecLand::has_been_confident()
+{
+    return _swoop_has_been_confident;
 }
 
 bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
@@ -410,12 +425,12 @@ void AC_PrecLand::update_swoop_target_position_cm()
             float err_length;
             for (uint8_t j=0; j<_tmp_target_history->available(); j++) {
                 const Vector2f *_err_target_data = (*_tmp_target_history)[j];
-                err.x = fabs(_ave_target_pos_abs_out_NE.x - _err_target_data->x);
-                err.y = fabs(_ave_target_pos_abs_out_NE.y - _err_target_data->y);
+                err.x = abs(_ave_target_pos_abs_out_NE.x - _err_target_data->x);
+                err.y = abs(_ave_target_pos_abs_out_NE.y - _err_target_data->y);
                 err_length = err.length();
 
                 // update largest error
-                if (err_length > fabs(max_err.length())){
+                if (err_length > abs(max_err.length())){
                     err_index = j;
                     max_err.x = err.x;
                     max_err.y = err.y;
@@ -428,6 +443,7 @@ void AC_PrecLand::update_swoop_target_position_cm()
                 cull_counter += 1;
             }else{
                 _swoop_filter_confident = true;
+                _swoop_has_been_confident = true;
                 break;
             }
         }
@@ -760,4 +776,11 @@ bool AC_PrecLand::backed_initialised(void){
 
 void AC_PrecLand::set_enabled(bool enabled){
     _enabled = enabled;
+}
+
+bool AC_PrecLand::can_abort(float hagl){
+    if(hagl > _min_abort_alt){
+        return true;
+    }
+    return false;
 }
