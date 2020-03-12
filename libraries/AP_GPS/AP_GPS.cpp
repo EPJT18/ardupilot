@@ -1652,6 +1652,21 @@ bool AP_GPS::is_healthy(uint8_t instance) const
            drivers[instance]->is_healthy();
 }
 
+
+// pre-arm check that all GPSs are healthy
+bool AP_GPS::all_healthy() const
+{
+    
+    for (int i = 0; i < GPS_MAX_RECEIVERS; i++) {
+        if (_type[i] != GPS_TYPE_NONE ) {
+            if(!is_healthy(i)){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool AP_GPS::prepare_for_arming(void) {
     bool all_passed = true;
     for (uint8_t i = 0; i < GPS_MAX_RECEIVERS; i++) {

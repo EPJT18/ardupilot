@@ -438,7 +438,7 @@ bool AP_Arming::gps_checks(bool report)
         }
 
         //GPS update rate acceptable
-        if (!gps.is_healthy()) {
+        if (!gps.all_healthy()) {
             check_failed(ARMING_CHECK_GPS, report, "GPS is not healthy");
             return false;
         }
