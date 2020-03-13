@@ -920,7 +920,7 @@ void QuadPlane::control_stabilize(void)
     hold_stabilize(pilot_throttle_scaled);
     //if idling on the pad and one of the motors hasnt started...
 
-    if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE ){
+    if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE && hover_motor_failed){
         gcs().send_text(MAV_SEVERITY_ERROR, "Hover motor failed - Abort takeoff");
         if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
             plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
