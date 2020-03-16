@@ -25,12 +25,13 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Description: Precision Land Type
     // @Values: 0:None, 1:CompanionComputer, 2:IRLock, 3:SITL_Gazebo, 4:SITL
     // @User: Advanced
+    // @RebootRequired: True
     AP_GROUPINFO("TYPE",    1, AC_PrecLand, _type, 0),
 
     // @Param: YAW_ALIGN
     // @DisplayName: Sensor yaw alignment
     // @Description: Yaw angle from body x-axis to sensor x-axis.
-    // @Range: 0 360
+    // @Range: 0 36000
     // @Increment: 1
     // @User: Advanced
     // @Units: cdeg
@@ -57,15 +58,15 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Param: EST_TYPE
     // @DisplayName: Precision Land Estimator Type
     // @Description: Specifies the estimation method to be used
-    // @Values: 0:RawSensor, 1:KalmanFilter
+    // @Values: 0:RawSensor, 1:KalmanFilter, 2:SwoopFilter
     // @User: Advanced
-    AP_GROUPINFO("EST_TYPE",    5, AC_PrecLand, _estimator_type, 1),
+    AP_GROUPINFO("EST_TYPE",    5, AC_PrecLand, _estimator_type, 2),
 
     // @Param: ACC_P_NSE
     // @DisplayName: Kalman Filter Accelerometer Noise
     // @Description: Kalman Filter Accelerometer Noise, higher values weight the input from the camera more, accels less
     // @Range: 0.5 5
-    // @User: Advanceds
+    // @User: Advanced
     AP_GROUPINFO("ACC_P_NSE", 6, AC_PrecLand, _accel_noise, 2.5f),
 
     // @Param: CAM_POS_X
@@ -85,24 +86,119 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Description: Z position of the camera in body frame. Positive Z is down from the origin.
     // @Units: m
     // @User: Advanced
-    AP_GROUPINFO("CAM_POS", 7, AC_PrecLand, _cam_offset, 0.0f),
+    AP_GROUPINFO("CAM_POS", 8, AC_PrecLand, _cam_offset, 0.0f),
 
     // @Param: BUS
     // @DisplayName: Sensor Bus
     // @Description: Precland sensor bus for I2C sensors.
     // @Values: -1:DefaultBus,0:InternalI2C,1:ExternalI2C
     // @User: Advanced
-    AP_GROUPINFO("BUS",    8, AC_PrecLand, _bus, -1),
+    AP_GROUPINFO("BUS",    9, AC_PrecLand, _bus, -1),
 
     // @Param: LAG
     // @DisplayName: Precision Landing sensor lag
     // @Description: Precision Landing sensor lag, to cope with variable landing_target latency
-    // @Range: 0.02 0.250
+    // @Range: 0.02 0.75
     // @Increment: 1
     // @Units: s
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("LAG", 9, AC_PrecLand, _lag, 0.02f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
+    AP_GROUPINFO("LAG", 10, AC_PrecLand, _lag, 0.2f), // 20ms is the old default buffer size (8 frames @ 400hz/2.5ms)
+
+    // @Param: TACQ_TIM
+    // @DisplayName: Target Aquired Timeout
+    // @Description: Time until estimate resets if target not seen
+    // @Range: 2 20
+    // @Increment: 1
+    // @Units: s
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("TACQ_TIM", 11, AC_PrecLand, _tacq_timeout, 2),
+
+    // @Param: NUM_SMP
+    // @DisplayName: Buffer size of swoop filter
+    // @Description: Buffer size of swoop filter
+    // @Range: 10 200
+    // @Increment: 1
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("NUM_SMP", 12, AC_PrecLand, _num_ave_samples, 10),
+
+    // @Param: TIMEOUT
+    // @DisplayName: Precision Landing timeout
+    // @Description: How long to wait to capture target at MIN_SRC_ALT before giving up. 
+    // @Range: 0 60
+    // @Increment: 1
+    // @Units: s
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("TIMEOUT", 13, AC_PrecLand, _timeout, 5),
+
+    // @Param: DN_SPD_MIN
+    // @DisplayName: Precland minimum descend speed
+    // @Description: Will not descend below this speed if performing precision landing
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+
+    AP_GROUPINFO("DN_SPD_MIN", 14, AC_PrecLand, _land_speed_min_cms, 50),
+
+    // @Param: MAX_POS_ERR
+    // @DisplayName: Acceptable pos error
+    // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MAX_POS_ERR", 15, AC_PrecLand, _acceptable_error_cm, 100),
+
+    // @Param: MIN_SRC_ALT
+    // @DisplayName: Minimum Search Alt
+    // @Description: If the target has not been seen and the vehicle has descended to this alt, stop and search for PLND_TACQ_TIM seconds
+    // @Units: m
+    // @Range: 10 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MIN_SRC_ALT", 16, AC_PrecLand, _min_search_alt, 40),
+
+    // @Param: MIN_ABRT_ALT
+    // @DisplayName: Minimum Abort Alt
+    // @Description: If the target is lost (ie PLND_TACQ_TIM expires) below this alt, continue with last target position estimate. Else abort. 
+    // @Units: m
+    // @Range: 10 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MIN_ABT_ALT", 17, AC_PrecLand, _min_abort_alt, 15),
+
+    // @Param: MAX_TGT_ERR
+    // @DisplayName: Acceptable target estimate error
+    // @Description: Max error the estimate buffer can have before becoming invalid.
+    // @Units: cm
+    // @Range: 10 1000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("MAX_TGT_ERR", 18, AC_PrecLand, _acceptable_target_error_cm, 100),
+
+    // @Param: MAX_PCT_OTL
+    // @DisplayName: Acceptable outlier cull percentage
+    // @Description: Max percentage of the buffer that are considered outliers before the estimate becomes invalid
+    // @Range: 0 1
+    // @Increment: 0.01
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("MAX_PCT_OTL", 19, AC_PrecLand, _max_cull_pct, 0.3),
+
+    // @Param: MAX_TGT_DST
+    // @DisplayName: Max Target Distance
+    // @Description: Maximum distance a target can be from the vehicle and be accepted (beware includes height)
+    // @Range: 0 200
+    // @Increment: 0.01
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("MAX_TGT_DST", 20, AC_PrecLand, _max_target_distance, 100),
+
+
 
     AP_GROUPEND
 };
@@ -132,7 +228,7 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
 
     // create inertial history buffer
     // constrain lag parameter to be within bounds
-    _lag = constrain_float(_lag, 0.02f, 0.25f);
+    _lag = constrain_float(_lag, 0.02f, 0.75f);
 
     // calculate inertial buffer size from lag and minimum of main loop rate and update_rate_hz argument
     const uint16_t inertial_buffer_size = MAX((uint16_t)roundf(_lag * MIN(update_rate_hz, AP::scheduler().get_loop_rate_hz())), 1);
@@ -142,6 +238,15 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     if (_inertial_history == nullptr) {
         return;
     }
+
+    // create a history of past estimates, return on failure so no backends are created
+    _target_history = new ObjectArray<Vector2f>(_num_ave_samples);
+    if (_target_history == nullptr) {
+        return;
+    }
+
+    // initialise timeout and filter
+    reinit();
 
     // instantiate backend based on type parameter
     switch ((enum PrecLandType)(_type.get())) {
@@ -173,6 +278,35 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     }
 }
 
+void AC_PrecLand::reinit(void){
+
+    //timeout
+    _commence_time = 0; // if zero, not active
+    reset_swoop_filter();
+    
+}
+
+void AC_PrecLand::start_search_timer(void){
+    _commence_time = AP_HAL::millis();
+}
+
+void AC_PrecLand::reset_swoop_filter(void){
+    //swoop filter
+    _outliers=0;
+    _swoop_has_been_confident = false;
+    _update_swoop_filt = false;
+    _target_history->clear();
+}
+
+bool AC_PrecLand::swoop_filter_ready(void){
+
+    if(_estimator_type==ESTIMATOR_TYPE_SWOOP_FILTER && (_target_history->space()>0)){
+        return false;
+    }else{
+        return true;
+    }
+}
+
 // update - give chance to driver to get updates from sensor
 void AC_PrecLand::update(float rangefinder_alt_cm, bool rangefinder_alt_valid)
 {
@@ -180,6 +314,8 @@ void AC_PrecLand::update(float rangefinder_alt_cm, bool rangefinder_alt_valid)
     if (_backend == nullptr || _inertial_history == nullptr) {
         return;
     }
+
+    _update_swoop_filt = false;
 
     // append current velocity and attitude correction into history buffer
     struct inertial_data_frame_s inertial_data_newest;
@@ -208,8 +344,13 @@ void AC_PrecLand::update(float rangefinder_alt_cm, bool rangefinder_alt_valid)
 
 bool AC_PrecLand::target_acquired()
 {
-    _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < 2000;
+    _target_acquired = _target_acquired && (AP_HAL::millis()-_last_update_ms) < (uint8_t)_tacq_timeout*1000.0f;
     return _target_acquired;
+}
+
+bool AC_PrecLand::has_been_confident()
+{
+    return _swoop_has_been_confident;
 }
 
 bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
@@ -217,13 +358,133 @@ bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
     if (!target_acquired()) {
         return false;
     }
+    switch (_estimator_type) {
+        case ESTIMATOR_TYPE_RAW_SENSOR: {
+            FALLTHROUGH;
+        }
+        case ESTIMATOR_TYPE_KALMAN_FILTER: {
+            
+            Vector2f curr_pos;
+            if (!AP::ahrs().get_relative_position_NE_origin(curr_pos)) {
+                return false;
+            }
+            ret.x = (_target_pos_rel_out_NE.x + curr_pos.x) * 100.0f;   // m to cm
+            ret.y = (_target_pos_rel_out_NE.y  + curr_pos.y) * 100.0f;  // m to cm
+            return true;
+        }
+        case ESTIMATOR_TYPE_SWOOP_FILTER: {
+            ret.x = _ave_target_pos_abs_out_NE.x * 100.0f;
+            ret.y = _ave_target_pos_abs_out_NE.y * 100.0f;
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
+}
+
+// To be used with SWOOP_FILTER enabled
+void AC_PrecLand::update_swoop_target_position_cm()
+{
+    if (!target_acquired()) {
+        return;
+    }
+
     Vector2f curr_pos;
     if (!AP::ahrs().get_relative_position_NE_origin(curr_pos)) {
-        return false;
+        return;
     }
-    ret.x = (_target_pos_rel_out_NE.x + curr_pos.x) * 100.0f;   // m to cm
-    ret.y = (_target_pos_rel_out_NE.y  + curr_pos.y) * 100.0f;  // m to cm
-    return true;
+
+    _swoop_filter_confident = false;
+
+    // Newest target absolute estimate
+    Vector2f curr_target_abs_NE;
+
+    curr_target_abs_NE.x = (_target_pos_rel_out_NE.x + curr_pos.x);
+    curr_target_abs_NE.y = (_target_pos_rel_out_NE.y + curr_pos.y);
+
+    // Add newest target estimate to buffer, replacing oldest sample
+    _target_history->push_force(curr_target_abs_NE);
+
+    // If you cull more that CULL_PCNT_MAX outliers and max error is still greater that MAX_ERR
+    // it is not safe to land
+
+    // copy of buffer into a new one that we can cull, we don't remember which outliers we culled last loop
+    ObjectArray<Vector2f> *_tmp_target_history = new ObjectArray<Vector2f>(_num_ave_samples);
+    for (uint8_t k=0; k<_target_history->available(); k++) {
+        const Vector2f *sample = (*_target_history)[k];
+        _tmp_target_history->push_force(*sample);
+    }
+
+    int max_cull_samples = (int)_num_ave_samples*_max_cull_pct;
+    Vector2f max_err = Vector2f(0.0f, 0.0f);
+    Vector2f err = Vector2f(0.0f, 0.0f);
+    uint16_t err_index = 0;
+    uint16_t cull_counter = 0;
+
+    // if buffer not full, don't bother processing
+    if (_target_history->space()==0){
+
+        for (int l=0; l<max_cull_samples; l++){
+
+            // get average
+            _ave_target_pos_abs_out_NE = get_buffer_average(_tmp_target_history);
+
+            // get max error
+            err = Vector2f(0.0f, 0.0f);
+            max_err = Vector2f(0.0f, 0.0f);
+            float err_length;
+            for (uint8_t j=0; j<_tmp_target_history->available(); j++) {
+                const Vector2f *_err_target_data = (*_tmp_target_history)[j];
+                err.x = abs(_ave_target_pos_abs_out_NE.x - _err_target_data->x);
+                err.y = abs(_ave_target_pos_abs_out_NE.y - _err_target_data->y);
+                err_length = err.length();
+
+                // update largest error
+                if (err_length > abs(max_err.length())){
+                    err_index = j;
+                    max_err.x = err.x;
+                    max_err.y = err.y;
+                }
+            }
+
+            // break if acceptable, cull largest error and repeat if not acceptable
+            if (max_err.length()>_acceptable_target_error_cm*0.01f){
+                _tmp_target_history->remove(err_index);
+                cull_counter += 1;
+            }else{
+                _swoop_filter_confident = true;
+                _swoop_has_been_confident = true;
+                break;
+            }
+        }
+
+    AP::logger().Write("PLFT", "TimeUS,c,o,valid,cX,cY,aX,aY,e", "QIIIfffff",
+                                        AP_HAL::micros64(),
+                                        (uint32_t)_target_history->available(),
+                                        (uint32_t)cull_counter,
+                                        (uint16_t)_swoop_filter_confident,
+                                        (float)curr_target_abs_NE.x,
+                                        (float)curr_target_abs_NE.y,
+                                        (float)_ave_target_pos_abs_out_NE.x,
+                                        (float)_ave_target_pos_abs_out_NE.y,
+                                        (float)max_err.length());
+    }
+}
+
+Vector2f AC_PrecLand::get_buffer_average(ObjectArray<Vector2f> *buffer){
+
+    Vector2f sum = Vector2f(0.0f, 0.0f);
+    Vector2f ave;
+    for (uint8_t i=0; i<buffer->available(); i++) {
+        const Vector2f *sample = (*buffer)[i];
+        sum.x += sample->x;
+        sum.y += sample->y;
+    }
+    ave.x = sum.x/(buffer->available());
+    ave.y = sum.y/(buffer->available());
+
+    return ave;
 }
 
 void AC_PrecLand::get_target_position_measurement_cm(Vector3f& ret)
@@ -243,19 +504,30 @@ bool AC_PrecLand::get_target_position_relative_cm(Vector2f& ret)
 
 bool AC_PrecLand::get_target_velocity_relative_cms(Vector2f& ret)
 {
-    if (!target_acquired()) {
+    // Swoop Filter assumes zero velocity
+    if (!target_acquired() || _estimator_type==ESTIMATOR_TYPE_SWOOP_FILTER) {
         return false;
     }
     ret = _target_vel_rel_out_NE*100.0f;
     return true;
 }
 
+float AC_PrecLand::get_target_distance_scalar(void)
+{
+    return norm(_target_pos_rel_out_NE.x, _target_pos_rel_out_NE.y)*100.0f;
+}
+
+uint32_t AC_PrecLand::get_lag(void)
+{
+    return _backend->get_lag();
+}
+
 // handle_msg - Process a LANDING_TARGET mavlink message
-void AC_PrecLand::handle_msg(const mavlink_message_t &msg)
+void AC_PrecLand::handle_msg(const mavlink_landing_target_t &packet, uint32_t timestamp_ms)
 {
     // run backend update
     if (_backend != nullptr) {
-        _backend->handle_msg(msg);
+        _backend->handle_msg(packet, timestamp_ms);
     }
 }
 
@@ -268,6 +540,9 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
     const struct inertial_data_frame_s *inertial_data_delayed = (*_inertial_history)[0];
 
     switch (_estimator_type) {
+        case ESTIMATOR_TYPE_SWOOP_FILTER: {
+            FALLTHROUGH;
+        }
         case ESTIMATOR_TYPE_RAW_SENSOR: {
             // Return if there's any invalid velocity data
             for (uint8_t i=0; i<_inertial_history->available(); i++) {
@@ -295,11 +570,15 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
 
                 _last_update_ms = AP_HAL::millis();
                 _target_acquired = true;
+                _update_swoop_filt = true;
             }
 
             // Output prediction
             if (target_acquired()) {
                 run_output_prediction();
+                if(_estimator_type==ESTIMATOR_TYPE_SWOOP_FILTER && _update_swoop_filt){
+                    update_swoop_target_position_cm();
+                }
             }
             break;
         }
@@ -356,6 +635,25 @@ void AC_PrecLand::run_estimator(float rangefinder_alt_m, bool rangefinder_alt_va
     }
 }
 
+bool AC_PrecLand::target_pos_confident()
+{
+    //TODO implement a measure of the swoop filter's confidence
+    switch (_estimator_type) {
+        case ESTIMATOR_TYPE_SWOOP_FILTER:
+        {
+            return _swoop_filter_confident;
+        }
+        case ESTIMATOR_TYPE_RAW_SENSOR: 
+        {
+            return true;
+        }
+        case ESTIMATOR_TYPE_KALMAN_FILTER: {
+            return true;
+        }
+    }    
+    return false;
+}
+
 bool AC_PrecLand::retrieve_los_meas(Vector3f& target_vec_unit_body)
 {
     if (_backend->have_los_meas() && _backend->los_meas_time_ms() != _last_backend_los_meas_ms) {
@@ -403,6 +701,25 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
 
             // Compute target position relative to IMU
             _target_pos_rel_meas_NED = Vector3f(target_vec_unit_ned.x*dist, target_vec_unit_ned.y*dist, alt) + cam_pos_ned;
+
+         
+            
+            AP::logger().Write("PLCL", "TimeUS,ts,bX,bY,bZ,nX,nY,nZ,tX,tY,tZ,tL", "QIffffffffff",
+                                        AP_HAL::micros64(),
+                                        (uint32_t)inertial_data_delayed->time_usec,
+                                        (float)target_vec_unit_body.x,
+                                        (float)target_vec_unit_body.y,
+                                        (float)target_vec_unit_body.z,
+                                        (float)target_vec_unit_ned.x,
+                                        (float)target_vec_unit_ned.y,
+                                        (float)target_vec_unit_ned.z,
+                                        (float)_target_pos_rel_meas_NED.x,
+                                        (float)_target_pos_rel_meas_NED.y,
+                                        (float)_target_pos_rel_meas_NED.z,
+                                        (float)_target_pos_rel_meas_NED.length());
+            if( _target_pos_rel_meas_NED.length()> _max_target_distance) {
+                return false;
+            }                    
             return true;
         }
     }
@@ -447,4 +764,40 @@ void AC_PrecLand::run_output_prediction()
     Vector3f land_ofs_ned_m = _ahrs.get_rotation_body_to_ned() * Vector3f(_land_ofs_cm_x,_land_ofs_cm_y,0) * 0.01f;
     _target_pos_rel_out_NE.x += land_ofs_ned_m.x;
     _target_pos_rel_out_NE.y += land_ofs_ned_m.y;
+
+    AP::logger().Write("PLKF", "TimeUS,tsmp,vX,vY,pX,pY", "QIffff",
+                                        AP_HAL::micros64(),
+                                        (uint32_t)(*_inertial_history)[_inertial_history->available()-1]->time_usec,
+                                        (float)_target_vel_rel_out_NE.x,
+                                        (float)_target_vel_rel_out_NE.y,
+                                        (float)_target_pos_rel_out_NE.x,
+                                        (float)_target_pos_rel_out_NE.y);
+}
+
+bool AC_PrecLand::timeout(void){
+
+    // if timer has been started and since expired
+    if ((_commence_time == 0) || (AP_HAL::millis() - _commence_time) >= (uint32_t)(_timeout.get()*1000)){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+bool AC_PrecLand::backed_initialised(void){
+    if (_backend != nullptr){
+        return true;
+    }
+    return false;
+}
+
+void AC_PrecLand::set_enabled(bool enabled){
+    _enabled = enabled;
+}
+
+bool AC_PrecLand::can_abort(float hagl){
+    if(hagl > _min_abort_alt){
+        return true;
+    }
+    return false;
 }

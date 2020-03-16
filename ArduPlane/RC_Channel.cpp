@@ -74,6 +74,10 @@ void RC_Channel_Plane::init_aux_function(const RC_Channel::aux_func_t ch_option,
         // want to startup with reverse thrust
         break;
 
+    case AUX_FUNC::PRECISION_LOITER:
+        do_aux_function(ch_option, ch_flag);
+        break;
+
     default:
         // handle in parent class
         RC_Channel::init_aux_function(ch_option, ch_flag);
@@ -118,6 +122,22 @@ void RC_Channel_Plane::do_aux_function(const aux_func_t ch_option, const aux_swi
         do_aux_function_change_mode(Mode::Number::TAKEOFF, ch_flag);
         break;
 
+
+    case AUX_FUNC::PRECISION_LOITER:
+#if PRECISION_LANDING == ENABLED
+        switch (ch_flag) {
+        case HIGH:
+            plane.quadplane.set_precision_loiter_enabled(true);
+            break;
+        case MIDDLE:
+            // nothing
+            break;
+        case LOW:
+            plane.quadplane.set_precision_loiter_enabled(false);
+            break;
+        }
+#endif
+        break;
 
     default:
         RC_Channel::do_aux_function(ch_option, ch_flag);

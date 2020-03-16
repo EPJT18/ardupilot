@@ -9,6 +9,7 @@ public:
 
     float getPos() const { return _state[0]; }
     float getVel() const { return _state[1]; }
+    float getPosCovariance() const { return _cov[0];}
 
     float getPosNIS(float pos, float posVar);
 
