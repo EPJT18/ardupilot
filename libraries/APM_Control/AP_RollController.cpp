@@ -89,6 +89,13 @@ const AP_Param::GroupInfo AP_RollController::var_info[] = {
 	// @User: User
 	AP_GROUPINFO("AMAX",        7, AP_RollController, gains.amax,         40),
 
+	// @Param: A
+	// @DisplayName: Maximum Rate Controller Output
+	// @Description: Maximum Rate of Roll rate  (deg/s/s). 
+	// @Range: 1 1000
+	// @Increment: 1
+	// @User: User
+	AP_GROUPINFO("RRMAX",        8, AP_RollController, gains.rrmax,         200),
 
 	AP_GROUPEND
 };
@@ -212,10 +219,10 @@ int32_t AP_RollController::get_servo_out(int32_t angle_err, float scaler, bool d
 	float desired_rate = angle_err * 0.01f / gains.tau;
 
     // Limit the demanded roll rate
-    if (gains.rmax && desired_rate < -gains.rmax) {
-        desired_rate = - gains.rmax;
-    } else if (gains.rmax && desired_rate > gains.rmax) {
-        desired_rate = gains.rmax;
+    if (gains.rrmax && desired_rate < -gains.rrmax) {
+        desired_rate = - gains.rrmax;
+    } else if (gains.rrmax && desired_rate > gains.rrmax) {
+        desired_rate = gains.rrmax;
     }
 
     return _get_rate_out(desired_rate, scaler, disable_integrator);
