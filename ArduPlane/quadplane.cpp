@@ -2697,11 +2697,12 @@ bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd,const AP_
     plane.set_next_WP(loc);
     if (options & OPTION_RESPECT_TAKEOFF_FRAME) {
         if (plane.current_loc.alt >= plane.next_WP_loc.alt) {
-            // we are above the takeoff already, no need to do anything
-            return false;
+            // run takeoff controller anyway to enable yaw before transition functionality
+            // set target alt to current alt
+            plane.next_WP_loc.alt = plane.current_loc.alt;
+        } else {
+            plane.next_WP_loc.alt = plane.current_loc.alt + cmd.content.location.alt;
         }
-    } else {
-        plane.next_WP_loc.alt = plane.current_loc.alt + cmd.content.location.alt;
     }
     throttle_wait = false;
     vtol_takeoff_yaw_wait = false;
