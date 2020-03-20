@@ -135,6 +135,9 @@ private:
     AP_Float _auto_bank_limit;
     AP_Float _turn_rate_correction_factor;
     AP_Float _L1_Auto_Period;
+    AP_Float _L1_Turn_Exit_Fraction;
+    AP_Float _L1_Mid_Turn_Gain;
+    AP_Float _L1_Turn_Delay;
     float _L1_xtrack_i_gain_prev = 0;
     uint32_t _last_update_waypoint_us;
     uint32_t _last_nav_angle_update_us;

@@ -12,7 +12,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 1 60
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("PERIOD",    0, AP_L1_Control, _L1_period, 17),
+    AP_GROUPINFO("PERIOD",    0, AP_L1_Control, _L1_period, 20),
 
     // @Param: DAMPING
     // @DisplayName: L1 control damping ratio
@@ -28,7 +28,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Range: 0 0.1
     // @Increment: 0.01
     // @User: Advanced
-    AP_GROUPINFO("XTRACK_I",   2, AP_L1_Control, _L1_xtrack_i_gain, 0.02),
+    AP_GROUPINFO("XTRACK_I",   2, AP_L1_Control, _L1_xtrack_i_gain, 0.1),
 
     // @Param: LIM_BANK
     // @DisplayName: Loiter Radius Bank Angle Limit
@@ -44,7 +44,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Units: deg
     // @Range: 0 89
     // @User: Advanced
-    AP_GROUPINFO("AUTO_BANK",   4, AP_L1_Control, _auto_bank_limit, 30.0f),
+    AP_GROUPINFO("AUTO_BANK",   4, AP_L1_Control, _auto_bank_limit, 40.0f),
 
 
     // @Param: Turn Rate correction factor
@@ -53,7 +53,7 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
 	// @Range: 0.1 2
 	// @Increment: 1
 	// @User: User
-	AP_GROUPINFO("TRCF", 8, AP_L1_Control, _turn_rate_correction_factor,0.625),
+	AP_GROUPINFO("TRCF", 8, AP_L1_Control, _turn_rate_correction_factor,1.0f),
 
     // @Param: Auto_L1_Period
     // @DisplayName:  integral gain to account for wind speed measurement error
@@ -61,8 +61,13 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @Units: 1/s
     // @Range: 0 89
     // @User: Advanced
-    AP_GROUPINFO("A_PERIOD", 9, AP_L1_Control, _L1_Auto_Period, 100.0f),
+    AP_GROUPINFO("A_PERIOD", 9, AP_L1_Control, _L1_Auto_Period, 40.0f),
 
+    AP_GROUPINFO("TEXIT", 10, AP_L1_Control, _L1_Turn_Exit_Fraction, 1.0f),
+
+    AP_GROUPINFO("TGAIN", 11, AP_L1_Control, _L1_Mid_Turn_Gain, 1.0f),
+
+    AP_GROUPINFO("TDELAY", 12, AP_L1_Control, _L1_Turn_Delay,  0.0f),
 
     AP_GROUPEND
 };
@@ -163,6 +168,13 @@ int32_t AP_L1_Control::nav_roll_cd_special(float _amax, float _rmax, float _trim
     float theta = (bank_limit*0.5f)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));
     Vector2f target_ground_velocity =  Vector2f(cosf(_nav_bearing),sinf(_nav_bearing));
     Vector2f _windspeed_vector = Vector2f(_ahrs.wind_estimate().x, _ahrs.wind_estimate().y);
+    Vector2f _check_windspeed =  _ahrs.groundspeed_vector() - (Vector2f(cosf( _ahrs.get_yaw()),sinf(_ahrs.get_yaw()))*airspeed);
+
+     //check if the wind estimate makes any sense
+    if (_windspeed_vector.angle(_check_windspeed) > M_PI_4 || _windspeed_vector.length() <_check_windspeed.length() *0.5 ||_windspeed_vector.length()>_check_windspeed.length()*2.0){
+        _windspeed_vector =  _check_windspeed; //this is more robust, but less accurate
+    }
+
     Vector2f target_air_velocity = get_airspeed_from_wind_ground(_windspeed_vector,target_ground_velocity,airspeed);
 
 
@@ -178,7 +190,7 @@ int32_t AP_L1_Control::nav_roll_cd_special(float _amax, float _rmax, float _trim
     }
 
     // If initial acceleration portion of the turn is complete
-    if( abs(_air_turn_angle/theta)<0.75  && !_initial_turn_complete && !_data_is_stale){
+    if( abs(_air_turn_angle/theta)<_L1_Turn_Exit_Fraction  && !_initial_turn_complete && !_data_is_stale){
         _initial_turn_complete = true;
          gcs().send_text(MAV_SEVERITY_INFO, "Initial turn complete  ");
     }
@@ -191,7 +203,7 @@ int32_t AP_L1_Control::nav_roll_cd_special(float _amax, float _rmax, float _trim
         bank_angle = constrain_float(bank_angle, -_auto_bank_limit, _auto_bank_limit)* 100.0f;
     }
     else{
-        bank_angle = (constrain_float(_air_turn_angle/theta,-1.0f,1.0f)* _auto_bank_limit)*100.0f;
+        bank_angle = (constrain_float(_air_turn_angle*_L1_Mid_Turn_Gain/theta,-1.0f,1.0f)* _auto_bank_limit)*100.0f;
     }
 
     
@@ -299,6 +311,13 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
     float theta = _turn_rate_correction_factor*(bank_limit*0.5f)*((bank_limit/roll_rate)+(roll_rate/roll_accel))*((6*GRAVITY_MSS)/(5*airspeed));
     Vector2f _groundspeed_vector_1 = _ahrs.groundspeed_vector();
     Vector2f _windspeed_vector = Vector2f(_ahrs.wind_estimate().x, _ahrs.wind_estimate().y);
+    Vector2f _check_windspeed =  _ahrs.groundspeed_vector() - (Vector2f(cosf( _ahrs.get_yaw()),sinf(_ahrs.get_yaw()))*airspeed);
+
+    //check if the wind estimate makes any sense
+    if (_windspeed_vector.angle(_check_windspeed) > M_PI_4 || _windspeed_vector.length() <_check_windspeed.length() *0.5 ||_windspeed_vector.length()>_check_windspeed.length()*2.0){
+        _windspeed_vector =  _check_windspeed; //this is more robust, but less accurate
+    }
+
     Vector2f _airspeed_vector_1 = _groundspeed_vector_1 - _windspeed_vector;
     Vector2f _groundspeed_vector_2 = turn_WP.get_distance_NE(next_WP);
     Vector2f _airspeed_vector_2 = get_airspeed_from_wind_ground(_windspeed_vector, _groundspeed_vector_2, airspeed);
@@ -334,9 +353,10 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
         if(turnDistanceScalar < _ahrs.groundspeed()*2.0){
             turnDistanceScalar = _ahrs.groundspeed()*2.0f;
         } 
-        Vector2f turnDistanceReturn  = _ahrs.groundspeed_vector().normalized()*turnDistanceScalar;
-        
-        turnDistanceReturn = turnDistanceReturn + turn_distance_extra;
+        if(current_loc.get_distance_NE(turn_WP).length()<1.0f){
+            return _groundspeed_vector_1;
+        }
+        Vector2f turnDistanceReturn  = current_loc.get_distance_NE(turn_WP).normalized()*(turnDistanceScalar +turn_distance_extra.length() + (_ahrs.groundspeed()*_L1_Turn_Delay)  );
         
         return turnDistanceReturn;
     }
@@ -362,7 +382,7 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
     float turnTimeThetaPortion = (2*((bank_limit/roll_rate)+(roll_rate/roll_accel)));
     float turnTime = turnTimealphaPortion + turnTimeThetaPortion;
 
-    turnDistanceXY = turnDistanceXY + (_windspeed_vector*turnTime)+turn_distance_extra;
+    turnDistanceXY = turnDistanceXY + (_windspeed_vector*turnTime)+turn_distance_extra + (_ahrs.groundspeed_vector()*_L1_Turn_Delay) ;
 
     return turnDistanceXY;
 
@@ -373,7 +393,7 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
  */
 Vector2f AP_L1_Control::get_airspeed_from_wind_ground(const Vector2f wind, const Vector2f ground, const float airspeed) const
 {
-    if (ground.length()<2.0f || airspeed<2.0f){
+    if (ground.length()<0.1f || airspeed<2.0f){
         return ground;
     }
     Vector2f G = ground.normalized();
