@@ -28,15 +28,6 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("TYPE",    1, AC_PrecLand, _type, 0),
 
-    // @Param: YAW_ALIGN
-    // @DisplayName: Sensor yaw alignment
-    // @Description: Yaw angle from body x-axis to sensor x-axis.
-    // @Range: 0 36000
-    // @Increment: 1
-    // @User: Advanced
-    // @Units: cdeg
-    AP_GROUPINFO("YAW_ALIGN",    2, AC_PrecLand, _yaw_align, 0),
-
     // @Param: LAND_OFS_X
     // @DisplayName: Land offset forward
     // @Description: Desired landing position of the camera forward of the target in vehicle body frame
@@ -68,6 +59,31 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Range: 0.5 5
     // @User: Advanced
     AP_GROUPINFO("ACC_P_NSE", 6, AC_PrecLand, _accel_noise, 2.5f),
+
+    // @Param: CAM_ANG_X
+    // @DisplayName: Camera X angle offset
+    // @Description: X angle of the camera in body frame. Right hand rule.
+    // @Range: 0 36000
+    // @Increment: 1
+    // @Units: cdeg
+    // @User: Advanced
+
+    // @Param: CAM_ANG_Y
+    // @DisplayName: Camera Y angle offset
+    // @Description: Y angle of the camera in body frame. Right hand rule.
+    // @Range: 0 36000
+    // @Increment: 1
+    // @Units: cdeg
+    // @User: Advanced
+
+    // @Param: CAM_ANG_Z
+    // @DisplayName: Camera Z angle offset
+    // @Description: Z angle of the camera in body frame. Right hand rule.
+    // @Range: 0 36000
+    // @Increment: 1
+    // @Units: cdeg
+    // @User: Advanced
+    AP_GROUPINFO("CAM_ANG", 7, AC_PrecLand, _cam_offset_ang, 0.0f),
 
     // @Param: CAM_POS_X
     // @DisplayName: Camera X position offset
@@ -656,20 +672,16 @@ bool AC_PrecLand::target_pos_confident()
 
 bool AC_PrecLand::retrieve_los_meas(Vector3f& target_vec_unit_body)
 {
+    Vector3f raw_target_vec_unit_body;
     if (_backend->have_los_meas() && _backend->los_meas_time_ms() != _last_backend_los_meas_ms) {
         _last_backend_los_meas_ms = _backend->los_meas_time_ms();
-        _backend->get_los_body(target_vec_unit_body);
+        _backend->get_los_body(raw_target_vec_unit_body);
 
-        // Apply sensor yaw alignment rotation
-        float sin_yaw_align = sinf(radians(_yaw_align*0.01f));
-        float cos_yaw_align = cosf(radians(_yaw_align*0.01f));
-        Matrix3f Rz = Matrix3f(
-            cos_yaw_align, -sin_yaw_align, 0,
-            sin_yaw_align, cos_yaw_align, 0,
-            0, 0, 1
-        );
+        // Apply sensor alignment rotation
+        Matrix3f sensor_rot;
+        sensor_rot.from_euler(radians(-_cam_offset_ang.get().x*0.01f), radians(-_cam_offset_ang.get().y*0.01f), radians(-_cam_offset_ang.get().z*0.01f));
+        target_vec_unit_body = sensor_rot*raw_target_vec_unit_body;
 
-        target_vec_unit_body = Rz*target_vec_unit_body;
         return true;
     } else {
         return false;
