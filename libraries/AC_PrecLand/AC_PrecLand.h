@@ -86,9 +86,6 @@ public:
     // returns ekf outlier count
     uint32_t ekf_outlier_count() const { return _outlier_reject_count; }
 
-    // returns minimum descent speed
-    uint16_t get_min_descent_speed() const { return _land_speed_min_cms; }
-
     // returns acceptable position error while descending
     uint16_t get_acceptable_error_cm() const { return _acceptable_error_cm; }
 

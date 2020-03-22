@@ -150,16 +150,6 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("TIMEOUT", 13, AC_PrecLand, _timeout, 5),
 
-    // @Param: DN_SPD_MIN
-    // @DisplayName: Precland minimum descend speed
-    // @Description: Will not descend below this speed if performing precision landing
-    // @Units: cm
-    // @Range: 10 1000
-    // @Increment: 1
-    // @User: Standard
-
-    AP_GROUPINFO("DN_SPD_MIN", 14, AC_PrecLand, _land_speed_min_cms, 50),
-
     // @Param: MAX_POS_ERR
     // @DisplayName: Acceptable pos error
     // @Description: Will descend at full speed while within this radius of the acceptable error, else will scale descent speed accordingly
