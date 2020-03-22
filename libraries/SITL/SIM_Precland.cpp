@@ -98,9 +98,9 @@ const AP_Param::GroupInfo SIM_Precland::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("DIST_LMT", 8, SIM_Precland, _dist_limit, 10),
 
-    // @Param: DIST_LIMIT
-    // @DisplayName: Precland device lateral range
-    // @Description: Precland device maximum lateral range
+    // @Param: NSE
+    // @DisplayName: Precland simulated noise
+    // @Description: Precland simulated noise
     // @Units: cm
     // @Range: 5 100
     // @User: Advanced
