@@ -208,6 +208,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Param: MAX_TGT_DST
     // @DisplayName: Max Target Distance
     // @Description: Maximum distance a target can be from the vehicle and be accepted (beware includes height)
+    // @Units: m
     // @Range: 0 200
     // @Increment: 0.01
     // @User: Advanced
@@ -729,7 +730,12 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
                                         (float)_target_pos_rel_meas_NED.y,
                                         (float)_target_pos_rel_meas_NED.z,
                                         (float)_target_pos_rel_meas_NED.length());
-            if( _target_pos_rel_meas_NED.length()> _max_target_distance) {
+
+            // Test if target is within a reasonable distance to craft
+            // (prevents unrealistically large estimated distances which probably aren't real)
+            Vector2f target_pos_rel_lateral_NE;
+            target_pos_rel_lateral_NE = Vector2f(_target_pos_rel_meas_NED.x, _target_pos_rel_meas_NED.y);
+            if(target_pos_rel_lateral_NE.length()> _max_target_distance) {
                 return false;
             }                    
             return true;
