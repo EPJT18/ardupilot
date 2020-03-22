@@ -1232,17 +1232,9 @@ bool QuadPlane::is_flying_vtol(void) const
  */
 float QuadPlane::landing_descent_rate_cms(float height_above_ground) const
 {
-    float speed_down = wp_nav->get_default_speed_down();
-    float ret = linear_interpolate(land_speed_cms, speed_down,
+    float ret = linear_interpolate(land_speed_cms, wp_nav->get_default_speed_down(),
                                    height_above_ground,
                                    land_final_alt, land_final_alt+6);
-#if PRECISION_LANDING == ENABLED
-    AC_PrecLand &precland = plane.g2.precland;
-    if (precland_active()) {
-        float land_slowdown = MAX(0.0f, pos_control->get_horizontal_error()*(speed_down/precland.get_acceptable_error_cm()));
-        ret = MAX(precland.get_min_descent_speed(), ret - land_slowdown);
-    }
-#endif
     return ret;
 }
 

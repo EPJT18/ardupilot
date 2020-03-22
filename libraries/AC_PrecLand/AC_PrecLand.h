@@ -86,9 +86,6 @@ public:
     // returns ekf outlier count
     uint32_t ekf_outlier_count() const { return _outlier_reject_count; }
 
-    // returns minimum descent speed
-    uint16_t get_min_descent_speed() const { return _land_speed_min_cms; }
-
     // returns acceptable position error while descending
     uint16_t get_acceptable_error_cm() const { return _acceptable_error_cm; }
 
@@ -182,10 +179,10 @@ private:
     AP_Int8                     _bus;               // which sensor bus
     AP_Int8                     _estimator_type;    // precision landing estimator type
     AP_Float                    _lag;               // sensor lag in seconds
-    AP_Float                    _yaw_align;         // Yaw angle from body x-axis to sensor x-axis.
     AP_Float                    _land_ofs_cm_x;     // Desired landing position of the camera forward of the target in vehicle body frame
     AP_Float                    _land_ofs_cm_y;     // Desired landing position of the camera right of the target in vehicle body frame
     AP_Float                    _accel_noise;       // accelerometer process noise
+    AP_Vector3f                 _cam_offset_ang;    // Angle of the camera relative to level
     AP_Vector3f                 _cam_offset;        // Position of the camera relative to the CG
     AP_Int8                     _timeout;           // Target search timeout
     AP_Int8                     _tacq_timeout;      // Time until EKF estimate resets if target not seen
