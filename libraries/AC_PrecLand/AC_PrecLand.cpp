@@ -362,9 +362,9 @@ bool AC_PrecLand::has_been_confident()
 
 bool AC_PrecLand::get_target_position_cm(Vector2f& ret)
 {
-    if (!target_acquired()) {
-        return false;
-    }
+    // if (!target_acquired()) {
+    //     return false;
+    // }
     switch (_estimator_type) {
         case ESTIMATOR_TYPE_RAW_SENSOR: {
             FALLTHROUGH;
