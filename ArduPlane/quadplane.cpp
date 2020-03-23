@@ -2841,7 +2841,8 @@ bool QuadPlane::verify_vtol_land(void)
     float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
     if(poscontrol.state >= QPOS_POSITION3 && precland_enabled){
 
-        if(precland.target_acquired() && precland_descend){
+        // If target already found - skip QPOS3 for a smooth descent
+        if(precland.target_acquired() && precland_descend && poscontrol.state == QPOS_POSITION3){
             gcs().send_text(MAV_SEVERITY_INFO, "Precland target found, continuing descent.");
             poscontrol.state = QPOS_LAND_DESCEND2;
         }
