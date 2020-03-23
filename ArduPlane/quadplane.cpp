@@ -3152,10 +3152,10 @@ bool QuadPlane::verify_vtol_land(void)
     }
 
 #if PRECISION_LANDING == ENABLED
-    // search for target
+    // search for target. Handles the case where the plane transitions below the search alt
     if (poscontrol.state == QPOS_LAND_DESCEND1 && below_min_precland_search_alt()){
         // if target is acquired and within descending radius, don't pause at search alt
-        if (precland_enabled && precland_descend){
+        if (precland_enabled && precland.target_acquired() && precland_descend){
             gcs().send_text(MAV_SEVERITY_INFO,"Target found, skipping search stage");
             poscontrol.state = QPOS_LAND_DESCEND2;
         }else{
