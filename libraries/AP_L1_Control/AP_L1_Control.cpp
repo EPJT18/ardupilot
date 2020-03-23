@@ -338,12 +338,15 @@ Vector2f AP_L1_Control::turn_distance_special( const struct Location &current_lo
 
     //reduce the distance if you are already rolled the correct direction
     Vector2f turn_distance_extra = Vector2f(0.0f,0.0f);
-    
-    if (_current_roll *_air_turn_angle<0.0f){
-        float turn_rate = 0.65*_turn_rate_correction_factor*bank_limit*((6*GRAVITY_MSS)/(5*airspeed));
-        turn_distance_extra =_ahrs.groundspeed_vector().normalized()*(1+abs(_current_roll)/bank_limit)*(theta/turn_rate) *_ahrs.groundspeed();
+    if(abs(_current_roll)>0.01){
+        if (_current_roll *_air_turn_angle<0.0f){
+            float turn_rate = 0.5*_turn_rate_correction_factor*bank_limit*((6*GRAVITY_MSS)/(5*airspeed));
+            turn_distance_extra =_ahrs.groundspeed_vector().normalized()*(abs(_current_roll)/bank_limit)*(theta/turn_rate) *_ahrs.groundspeed();
+        }
+        else{
+            theta = (1 - (0.5*abs(_current_roll)/bank_limit))*theta;
+        }
     }
-    theta = (1 - (0.5*abs(_current_roll)/bank_limit))*theta;
     
     // If there is no constant roll portion of the turn
     if(abs(_air_turn_angle) <  2*theta ){
