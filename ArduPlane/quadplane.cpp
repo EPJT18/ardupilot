@@ -1257,8 +1257,7 @@ bool QuadPlane::precland_active(void) const
 
     return precland.enabled() && 
             pos_control->is_active_xy() && 
-            precland.has_been_confident() && 
-            precland.swoop_filter_ready();
+            precland.has_been_confident();
 #else
     return false;
 #endif
