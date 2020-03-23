@@ -595,6 +595,11 @@ void Plane::calc_nav_roll()
     previous_roll_cd = nav_roll_cd;
 }
 
+float Plane::get_nav_roll()
+{
+    return radians(nav_roll_cd/100.0f);
+}
+
 void Plane::calc_nav_roll_auto()
 {
     int32_t commanded_roll = nav_controller->nav_roll_cd_special(plane.rollController.gains.amax, plane.rollController.gains.rmax, TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min);
