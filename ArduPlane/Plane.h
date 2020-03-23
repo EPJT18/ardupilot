@@ -966,6 +966,7 @@ private:
     void calc_throttle();
     void calc_nav_roll();
     void calc_nav_roll_auto();
+    float get_nav_roll();
     void calc_nav_pitch();
     void update_flight_stage();
     void update_navigation();

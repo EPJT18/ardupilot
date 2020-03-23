@@ -671,7 +671,7 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
     }
 
     else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax,TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min, ahrs.roll );
+        acceptance_distance_m = nav_controller->turn_distance_special(plane.current_loc, cmd.content.location, mission.get_next_location(cmd.content.location), rollController.gains.rmax, rollController.gains.amax,TECS_controller.get_target_airspeed(), plane.aparm.airspeed_min, plane.get_nav_roll() );
     }
     
 
