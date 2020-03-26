@@ -3672,9 +3672,11 @@ bool QuadPlane::verify_vtol_land(void)
                     return true;
                 case PROCEED_GPS_LAND:
                     // proceed, disable precision landing
-                    gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
-                    poscontrol.state = QPOS_LAND_DESCEND2;
-                    pland_fail_type = 2;
+                    if (poscontrol.state < QPOS_LAND_DESCEND2){
+                        gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
+                        poscontrol.state = QPOS_LAND_DESCEND2;
+                        pland_fail_type = 2;
+                    }
                     break;
                 case ABORT_CONTINUE_CNTGCY_WP:
                     // abort

@@ -203,7 +203,7 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @Increment: 0.01
     // @User: Advanced
     // @RebootRequired: True
-    AP_GROUPINFO("MAX_TGT_DST", 20, AC_PrecLand, _max_target_distance, 100),
+    AP_GROUPINFO("MAX_TGT_DST", 20, AC_PrecLand, _max_target_distance, 10),
 
 
 
