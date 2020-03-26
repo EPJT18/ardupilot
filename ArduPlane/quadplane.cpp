@@ -2937,8 +2937,9 @@ void QuadPlane::vtol_position_controller(void)
 
             AC_PrecLand &precland = plane.g2.precland;
             Vector2f target_pos, target_vel_rel;
+            landing_behaviour qland_behaviour = (enum landing_behaviour)plane.mission.get_current_nav_cmd().p1;
             
-            if (precland_active()){
+            if (precland_active() && (qland_behaviour != PLND_DISABLED)){
                 // If target detected
                 if (precland.get_target_position_cm(target_pos)) {
                     // update the new location
