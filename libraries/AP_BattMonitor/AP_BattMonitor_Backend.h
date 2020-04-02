@@ -37,11 +37,20 @@ public:
     /// returns true if battery monitor instance provides consumed energy info
     virtual bool has_consumed_energy() const { return false; }
 
+    /// returns true if battery monitor instance provides consumed current info via a lookup table
+    virtual bool has_consumed_current_lookup() const { return false; }
+
+    /// returns true if battery monitor instance provides consumed energy info via a lookup table
+    virtual bool has_consumed_energy_lookup() const { return false; }
+
     /// returns true if battery monitor instance provides current info
     virtual bool has_current() const = 0;
 
     // returns true if battery monitor provides individual cell voltages
     virtual bool has_cell_voltages() const { return false; }
+
+    // returns true if battery monitor provides individual cell voltages
+    virtual bool has_wh_remaining() const { return false; }
 
     /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
     uint8_t capacity_remaining_pct() const;
@@ -51,7 +60,7 @@ public:
     float voltage_resting_estimate() const;
 
     // update battery resistance estimate and voltage_resting_estimate
-    void update_resistance_estimate();
+    virtual void update_resistance_estimate();
 
     // updates failsafe timers, and returns what failsafes are active
     AP_BattMonitor::BatteryFailsafe update_failsafes(void);

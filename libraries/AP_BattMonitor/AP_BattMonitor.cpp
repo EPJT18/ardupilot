@@ -6,6 +6,7 @@
 #include "AP_BattMonitor_Sum.h"
 #include "AP_BattMonitor_FuelFlow.h"
 #include "AP_BattMonitor_FuelLevel_PWM.h"
+#include "AP_BattMonitor_Swoop.h"
 
 #include <AP_HAL/AP_HAL.h>
 
@@ -142,7 +143,8 @@ AP_BattMonitor::init()
             case AP_BattMonitor_Params::BattMonitor_TYPE_FuelLevel_PWM:
                 drivers[instance] = new AP_BattMonitor_FuelLevel_PWM(*this, state[instance], _params[instance]);
                 break;
-            case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
+            case AP_BattMonitor_Params::BattMonitor_Type_Swoop:
+                drivers[instance] = new AP_BattMonitor_Swoop(*this, state[instance], _params[instance]);
             default:
                 break;
         }
@@ -299,6 +301,16 @@ bool AP_BattMonitor::consumed_mah(float &mah, const uint8_t instance) const {
     }
 }
 
+/// consumed_mah_lookup - returns total current drawn since start-up in milliampere.hours
+bool AP_BattMonitor::consumed_mah_lookup(float &mah_lookup, const uint8_t instance) const {
+    if ((instance < _num_instances) && (drivers[instance] != nullptr) && drivers[instance]->has_consumed_current_lookup()) {
+        mah_lookup = state[instance].consumed_mah_lookup;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /// consumed_wh - returns energy consumed since start-up in Watt.hours
 bool AP_BattMonitor::consumed_wh(float &wh, const uint8_t instance) const {
     if (instance < _num_instances && drivers[instance] != nullptr && drivers[instance]->has_consumed_energy()) {
@@ -308,6 +320,28 @@ bool AP_BattMonitor::consumed_wh(float &wh, const uint8_t instance) const {
         return false;
     }
 }
+
+/// consumed_wh_lookup - returns energy consumed since start-up in Watt.hours (calculated from lookup table)
+bool AP_BattMonitor::consumed_wh_lookup(float &wh_lookup, const uint8_t instance) const {
+    if (instance < _num_instances && drivers[instance] != nullptr && drivers[instance]->has_consumed_energy_lookup()) {
+        wh_lookup = state[instance].consumed_wh_lookup;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/// remaining_wh - returns energy remaining in Watt.hours (calculated from lookup table)
+bool AP_BattMonitor::remaining_wh(float &remaining_wh, const uint8_t instance) const {
+    if (instance < _num_instances && drivers[instance] != nullptr && drivers[instance]->has_wh_remaining()) {
+        remaining_wh = state[instance].remaining_wh;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
 
 /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
 uint8_t AP_BattMonitor::capacity_remaining_pct(uint8_t instance) const

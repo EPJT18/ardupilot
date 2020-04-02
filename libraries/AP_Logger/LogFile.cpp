@@ -648,25 +648,39 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     AP_BattMonitor &battery = AP::battery();
     float temp;
     bool has_temp = battery.get_temperature(temp, battery_instance);
-    float current, consumed_mah, consumed_wh;
+    bool healthy = battery.healthy();
+    float current, consumed_mah, consumed_wh, consumed_wh_lookup, consumed_mah_lookup, remaining_wh;
     if (!battery.current_amps(current, battery_instance)) {
         current = quiet_nanf();
     }
     if (!battery.consumed_mah(consumed_mah, battery_instance)) {
         consumed_mah = quiet_nanf();
     }
+    if (!battery.consumed_mah_lookup(consumed_mah_lookup, battery_instance)) {
+        consumed_mah_lookup = quiet_nanf();
+    }
     if (!battery.consumed_wh(consumed_wh, battery_instance)) {
         consumed_wh = quiet_nanf();
+    }
+    if (!battery.consumed_wh_lookup(consumed_wh_lookup, battery_instance)) {
+        consumed_wh_lookup = quiet_nanf();
+    }
+    if (!battery.remaining_wh(remaining_wh, battery_instance)) {
+        remaining_wh = quiet_nanf();
     }
 
     const struct log_Current pkt = {
         LOG_PACKET_HEADER_INIT(type),
         time_us             : time_us,
+        healthy             : healthy,
         voltage             : battery.voltage(battery_instance),
         voltage_resting     : battery.voltage_resting_estimate(battery_instance),
         current_amps        : current,
         current_total       : consumed_mah,
+        consumed_mah_lookup : consumed_mah_lookup,
         consumed_wh         : consumed_wh,
+        consumed_wh_lookup  : consumed_wh_lookup,
+        remaining_wh        : remaining_wh,
         temperature         : (int16_t)(has_temp ? (temp * 100) : 0),
         resistance          : battery.get_resistance(battery_instance)
     };

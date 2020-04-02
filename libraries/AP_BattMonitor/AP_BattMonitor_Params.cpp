@@ -13,7 +13,7 @@ const AP_Param::GroupInfo AP_BattMonitor_Params::var_info[] = {
     // @Param: MONITOR
     // @DisplayName: Battery monitoring
     // @Description: Controls enabling monitoring of the battery's voltage and current
-    // @Values: 0:Disabled,3:Analog Voltage Only,4:Analog Voltage and Current,5:Solo,6:Bebop,7:SMBus-Maxell,8:UAVCAN-BatteryInfo,9:BLHeli ESC,10:SumOfFollowing,11:FuelFlow,12:FuelLevelPWM
+    // @Values: 0:Disabled,3:Analog Voltage Only,4:Analog Voltage and Current,5:Solo,6:Bebop,7:SMBus-Maxell,8:UAVCAN-BatteryInfo,9:BLHeli ESC,10:SumOfFollowing,11:FuelFlow,12:FuelLevelPWM,20:Swoop
     // @User: Standard
     // @RebootRequired: True
     AP_GROUPINFO_FLAGS("MONITOR", 1, AP_BattMonitor_Params, _type, BattMonitor_TYPE_NONE, AP_PARAM_FLAG_ENABLE),
@@ -162,6 +162,52 @@ const AP_Param::GroupInfo AP_BattMonitor_Params::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("ARM_MAH", 19, AP_BattMonitor_Params, _arming_minimum_capacity, 0),
 
+    // @Param: RES_EST_TC1
+    // @DisplayName: Resistance estimate filter timeconstant alpha
+    // @Description: Resistance estimate filter timeconstant alpha
+    // @Units: s
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("R_EST_TC1", 20, AP_BattMonitor_Params, _resistance_est_tc_1, 0.5),
+
+    // @Param: RES_EST_TC12    
+    // @DisplayName: Resistance estimate filter timeconstant alpha
+    // @Description: Resistance estimate filter timeconstant alpha
+    // @Units: s
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("R_EST_TC2", 21, AP_BattMonitor_Params, _resistance_est_tc_2, 0.1),
+
+    // @Param: TYPE    
+    // @DisplayName: Swoop Monitor Battery Type
+    // @Values: 0:LGMJ1,1:TattuLiPo 
+    // @Units: s
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("TYPE", 22, AP_BattMonitor_Params, _chemistry, 0),
+
+    // @Param: SWP_S    
+    // @DisplayName: Swoop Monitor Battery Series Configuration
+    // @Range: 0 20
+    // @User: Advanced
+    AP_GROUPINFO("SWP_S", 23, AP_BattMonitor_Params, _series, 10),
+
+    // @Param: SWP_P    
+    // @DisplayName: Swoop Monitor Battery Parallel Configuration
+    // @Range: 0 10
+    // @User: Advanced
+    AP_GROUPINFO("SWP_P", 24, AP_BattMonitor_Params, _parallel, 7),
+
+    // @Param: V_MIS
+    // @DisplayName: Allowable estimator mismatch
+    // @Description: Allowable mismatch between the estimated resting voltage between calculations based on current sensing and lookup
+    // @Units: V
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("V_MIS", 25, AP_BattMonitor_Params, _allowable_v_est_deviation, 0.1),
+
+    
+
     AP_GROUPEND
 
 };
@@ -169,3 +215,5 @@ const AP_Param::GroupInfo AP_BattMonitor_Params::var_info[] = {
 AP_BattMonitor_Params::AP_BattMonitor_Params(void) {
     AP_Param::setup_object_defaults(this, var_info);
 }
+
+//fw = 0.014/cell

@@ -25,6 +25,7 @@ public:
         BattMonitor_TYPE_Sum                        = 10,
         BattMonitor_TYPE_FuelFlow                   = 11,
         BattMonitor_TYPE_FuelLevel_PWM              = 12,
+        BattMonitor_Type_Swoop                      = 20,
     };
 
     // low voltage sources (used for BATT_LOW_TYPE parameter)
@@ -55,5 +56,14 @@ public:
     AP_Int8  _failsafe_critical_action; /// action to preform on a critical battery failsafe
     AP_Int32 _arming_minimum_capacity;  /// capacity level required to arm
     AP_Float _arming_minimum_voltage;   /// voltage level required to arm
+    AP_Float _resistance_est_tc_1;      /// internal resistance estimate filter time constant 1
+    AP_Float _resistance_est_tc_2;      /// internal resistance estimate filter time constant 2
+
+    // Only applicable to swoop battery types
+    AP_Int8  _chemistry;                /// Battery chemistry
+    AP_Int8  _series;                   /// Battery series configuration 
+    AP_Int8  _parallel;                 /// Battery parallel configuration 
+    AP_Float _allowable_v_est_deviation;/// Allowable mismatch between the estimated resting voltage between calculations based on current sensing and lookup
+
 
 };

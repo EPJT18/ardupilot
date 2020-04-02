@@ -38,6 +38,7 @@ class AP_BattMonitor
     friend class AP_BattMonitor_Sum;
     friend class AP_BattMonitor_FuelFlow;
     friend class AP_BattMonitor_FuelLevel_PWM;
+    friend class AP_BattMonitor_Swoop;
 
 public:
 
@@ -71,6 +72,9 @@ public:
         float       current_amps;              // current in amperes
         float       consumed_mah;              // total current draw in milliamp hours since start-up
         float       consumed_wh;               // total energy consumed in Wh since start-up
+        float       consumed_mah_lookup;       // estimated current draw in mah according to resting voltage lookup
+        float       consumed_wh_lookup;        // estimated energy consumed in Wh according to resting voltage lookup
+        float       remaining_wh;              // estimated energy remaining in Wh according to current sensor/lookup table
         uint32_t    last_time_micros;          // time when voltage and current was last read in microseconds
         uint32_t    low_voltage_start_ms;      // time when voltage dropped below the minimum in milliseconds
         uint32_t    critical_voltage_start_ms; // critical voltage failsafe start timer in milliseconds
@@ -111,9 +115,18 @@ public:
 
     /// consumed_mah - returns total current drawn since start-up in milliampere.hours
     bool consumed_mah(float &mah, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+ 
+    /// consumed_mah_lookup - returns total current drawn since start-up in milliampere.hours (calculated from lookup table)
+    bool consumed_mah_lookup(float &mah_lookup, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
 
     /// consumed_wh - returns total energy drawn since start-up in watt.hours
     bool consumed_wh(float&wh, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// consumed_wh_lookup - returns total energy drawn since start-up in watt.hours (calculated from lookup table)
+    bool consumed_wh_lookup(float&wh_lookup, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// remaining_lookup - returns energy remaining in watt.hour
+    bool remaining_wh(float&remaining_wh, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
 
     /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
     virtual uint8_t capacity_remaining_pct(uint8_t instance) const;

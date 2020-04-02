@@ -758,11 +758,15 @@ struct PACKED log_PID {
 struct PACKED log_Current {
     LOG_PACKET_HEADER;
     uint64_t time_us;
+    bool     healthy;
     float    voltage;
     float    voltage_resting;
     float    current_amps;
     float    current_total;
+    float    consumed_mah_lookup;
     float    consumed_wh;
+    float    consumed_wh_lookup;
+    float    remaining_wh;
     int16_t  temperature; // degrees C * 100
     float    resistance;
 };
@@ -1297,10 +1301,10 @@ struct PACKED log_Arm_Disarm {
 #define QUAT_UNITS  "s????"
 #define QUAT_MULTS  "F????"
 
-#define CURR_LABELS "TimeUS,Volt,VoltR,Curr,CurrTot,EnrgTot,Temp,Res"
-#define CURR_FMT    "Qfffffcf"
-#define CURR_UNITS  "svvA?JOw"
-#define CURR_MULTS  "F000?/?0"
+#define CURR_LABELS "TimeUS,H,Volt,VoltR,A,mah,Emah,J,EJ,RJ,Temp,Res"
+#define CURR_FMT    "QBffffffffcf"
+#define CURR_UNITS  "s-vvA??JJJOw"
+#define CURR_MULTS  "F-000??//??0"
 
 #define CURR_CELL_LABELS "TimeUS,Volt,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10"
 #define CURR_CELL_FMT    "QfHHHHHHHHHH"
