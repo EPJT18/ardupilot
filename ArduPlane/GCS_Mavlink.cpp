@@ -314,6 +314,75 @@ void Plane::send_wind(mavlink_channel_t chan)
         wind.z);
 }
 
+void Plane::send_swoop_status(mavlink_channel_t chan){
+   
+    mavlink_msg_swoop_status_send(chan, quadplane.swoop_flight_status(), mission.get_current_nav_cmd().id, mission.get_next_nav_cmd_id() );
+}
+
+
+void Plane::send_swoop_flags(mavlink_channel_t chan) 
+{
+
+    if (hal.util->get_soft_armed()) {
+        mavlink_msg_swoop_inflight_flags_instant_send(
+            chan,
+            quadplane.swoop_flags(),
+            quadplane.swoop_max_flag_level(),
+            quadplane.swoop_flag_level(HOVER_ASSIST),
+            quadplane.swoop_flag_level(EMERGENCY_LAND),
+            quadplane.swoop_flag_level(GPS_HEALTH),
+            quadplane.swoop_flag_level(VIBRATION),
+            quadplane.swoop_flag_level(HOVER_MOTORS),
+            quadplane.swoop_flag_level(FORWARD_MOTORS),
+            quadplane.swoop_flag_level(LIDAR),
+            quadplane.swoop_flag_level(HOVER_BATTERY),
+            quadplane.swoop_flag_level(FORWARD_BATTERY),
+            quadplane.swoop_flag_level(ALTITUDE),
+            quadplane.swoop_flag_level(WIND),
+            quadplane.swoop_flag_level(HOVER_ATTITUDE),
+            quadplane.swoop_flag_level(LANDING),
+            quadplane.swoop_flag_level(AERODYNAMIC),
+            quadplane.swoop_flag_level(AIRSPEED),
+            quadplane.swoop_flag_level(SERVO),
+            quadplane.swoop_flag_detail(HOVER_ASSIST),
+            quadplane.swoop_flag_detail(EMERGENCY_LAND),
+            quadplane.swoop_flag_detail(GPS_HEALTH),
+            quadplane.swoop_flag_detail(VIBRATION),
+            quadplane.swoop_flag_detail(HOVER_MOTORS),
+            quadplane.swoop_flag_detail(FORWARD_MOTORS),
+            quadplane.swoop_flag_detail(LIDAR),
+            quadplane.swoop_flag_detail(HOVER_BATTERY),
+            quadplane.swoop_flag_detail(FORWARD_BATTERY),
+            quadplane.swoop_flag_detail(ALTITUDE),
+            quadplane.swoop_flag_detail(WIND),
+            quadplane.swoop_flag_detail(HOVER_ATTITUDE),
+            quadplane.swoop_flag_detail(LANDING),
+            quadplane.swoop_flag_detail(AERODYNAMIC),
+            quadplane.swoop_flag_detail(AIRSPEED),
+            quadplane.swoop_flag_detail(SERVO)    
+
+        );
+    }
+}
+
+
+void Plane::send_swoop_arming_flags(mavlink_channel_t chan){
+    
+    if(!hal.util->get_soft_armed()){
+        mavlink_msg_swoop_arming_flags_send(
+            chan,
+            arming.arm_check_status(),
+            arming.arm_check_detail_1(),
+            arming.arm_check_detail_2(),
+            arming.arm_check_detail_common()
+
+        );
+
+
+    }
+}
+
+
 // sends a single pid info over the provided channel
 void GCS_MAVLINK_Plane::send_pid_info(const AP_Logger::PID_Info *pid_info,
                           const uint8_t axis, const float achieved)
@@ -444,7 +513,27 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
     case MSG_LANDING:
         plane.landing.send_landing_message(chan);
         break;
-    default:
+
+    case MSG_SWOOP_FLAGS:
+        plane.send_swoop_flags(chan);
+        break;
+
+    case MSG_SWOOP_ARMING_FLAGS:
+        plane.send_swoop_arming_flags(chan);
+        break;
+    
+    case MSG_SWOOP_STATUS:
+        plane.send_swoop_status(chan);
+        break;
+
+    case MSG_SWOOP_ENERGY:
+        //plane.send_swoop_energy(chan);
+        break;
+
+    
+    
+ 
+   default:
         return GCS_MAVLINK::try_send_message(id);
     }
     return true;
@@ -544,6 +633,8 @@ const AP_Param::GroupInfo GCS_MAVLINK_Parameters::var_info[] = {
     // @Increment: 1
     // @User: Advanced
     AP_GROUPINFO("ADSB",   9, GCS_MAVLINK_Parameters, streamRates[9],  5),
+
+    AP_GROUPINFO("SWOOP",   10, GCS_MAVLINK_Parameters, streamRates[10],  1),
     AP_GROUPEND
 };
 
@@ -615,11 +706,20 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_EKF_STATUS_REPORT,
     MSG_VIBRATION,
 };
+
+
 static const ap_message STREAM_PARAMS_msgs[] = {
     MSG_NEXT_PARAM
 };
 static const ap_message STREAM_ADSB_msgs[] = {
     MSG_ADSB_VEHICLE
+};
+
+static const ap_message STREAM_SWOOP_msgs[] = {
+    MSG_SWOOP_FLAGS,
+    MSG_SWOOP_ARMING_FLAGS,
+    MSG_SWOOP_STATUS,
+    MSG_SWOOP_ENERGY
 };
 
 const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
@@ -633,6 +733,7 @@ const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
     MAV_STREAM_ENTRY(STREAM_EXTRA3),
     MAV_STREAM_ENTRY(STREAM_PARAMS),
     MAV_STREAM_ENTRY(STREAM_ADSB),
+    MAV_STREAM_ENTRY(STREAM_SWOOP),
     MAV_STREAM_TERMINATOR // must have this at end of stream_entries
 };
 

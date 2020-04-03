@@ -39,7 +39,7 @@
     }
 #define MAV_STREAM_TERMINATOR { (streams)0, nullptr, 0 }
 
-#define GCS_MAVLINK_NUM_STREAM_RATES 10
+#define GCS_MAVLINK_NUM_STREAM_RATES 11
 class GCS_MAVLINK_Parameters
 {
 public:
@@ -135,6 +135,7 @@ public:
         STREAM_EXTRA3,
         STREAM_PARAMS,
         STREAM_ADSB,
+        STREAM_SWOOP,
         NUM_STREAMS
     };
 

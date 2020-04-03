@@ -284,6 +284,32 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     AP_GROUPINFO("BLEND_TC", 21, AP_GPS, _blend_tc, 10.0f),
 #endif
 
+    // @Param: DEGR_HDOP
+    // @DisplayName: Degraded HDOP Threshold
+    // @Description: HDOP values above this threshold are shown as degraded
+    // @User: Advanced
+    AP_GROUPINFO("DEGR_HDOP", 22, AP_GPS, _degraded_hdop_threshold, 2.0f),
+
+    // @Param: S_DEGR_HDOP
+    // @DisplayName: Degraded HDOP Threshold
+    // @Description: HDOP values above this threshold are shown as degraded
+    // @User: Advanced
+    AP_GROUPINFO("S_DEGR_HDOP", 23, AP_GPS, _sig_degraded_hdop_threshold, 5.0f),
+
+    // @Param: DEGR_SATS
+    // @DisplayName: Degraded HDOP Threshold
+    // @Description: HDOP values above this threshold are shown as degraded
+    // @User: Advanced
+    AP_GROUPINFO("DEGR_SATS", 24, AP_GPS, _degraded_sats_threshold, 10.0f),
+
+    // @Param: S_DEGR_SATS
+    // @DisplayName: Degraded HDOP Threshold
+    // @Description: HDOP values above this threshold are shown as degraded
+    // @User: Advanced
+    AP_GROUPINFO("S_DEGR_SATS", 25, AP_GPS, _sig_degraded_sats_threshold, 7.0f),
+
+
+
     AP_GROUPEND
 };
 
@@ -1631,6 +1657,47 @@ void AP_GPS::calc_blended_state(void)
 }
 #endif // GPS_BLENDED_INSTANCE
 
+
+bool AP_GPS::swoop_health_flag() const{
+
+    if (swoop_net_health_status() >0){
+        return true;
+    }
+    return false;
+}
+
+uint8_t AP_GPS::swoop_health_status(uint8_t instance) const{
+    if (_type[instance] != GPS_TYPE_NONE ) {
+        int returnValue = 0;
+        if (state[instance].hdop > _degraded_hdop_threshold*100 || state[instance].num_sats < _degraded_sats_threshold){
+            returnValue = 1;
+        }
+        if (state[instance].hdop > _sig_degraded_hdop_threshold*100 || state[instance].num_sats < _sig_degraded_sats_threshold){
+            returnValue = 2;
+        }
+        if (!is_healthy(instance)){
+            returnValue = 3;
+        }
+        return returnValue;
+    }
+    return 3;
+}
+
+uint8_t AP_GPS::swoop_net_health_status() const{
+    int GPS1_Status = swoop_health_status(0);
+    int GPS2_Status = swoop_health_status(1);
+    const int statusTable[4][4] = { 
+                        {0,     ADVICE, ADVICE, CAUTION},
+                        {ADVICE,CAUTION,CAUTION,CAUTION},
+                        {ADVICE,CAUTION,CAUTION,CAUTION},
+                        {CAUTION,CAUTION,CAUTION,WARNING}
+                        };                    
+    return statusTable[GPS1_Status][GPS2_Status];
+    
+}
+
+
+
 bool AP_GPS::is_healthy(uint8_t instance) const
 {
     if (instance >= GPS_MAX_INSTANCES) {
@@ -1646,6 +1713,10 @@ bool AP_GPS::is_healthy(uint8_t instance) const
         return last_msg_valid && blend_health_check();
     }
 #endif
+
+    if(state[instance].status < 2){
+        return false;
+    }
 
     return last_msg_valid &&
            drivers[instance] != nullptr &&

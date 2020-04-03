@@ -520,6 +520,27 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     // @User: Standard
 
     AP_GROUPINFO("DESCEND_RADIUS", 30, QuadPlane, descend_radius, 500),
+    AP_GROUPINFO("VIBE_NOTE", 31, QuadPlane, vibration_note, 50.0f),
+    AP_GROUPINFO("VIBE_ADVICE", 32, QuadPlane, vibration_advice, 100.0f),
+    AP_GROUPINFO("VIBE_CAUTION", 33, QuadPlane, vibration_caution, 200.0f),
+    AP_GROUPINFO("VIBE_WARNING", 34, QuadPlane, vibration_warning, 400.0f),
+    AP_GROUPINFO("LIDAR_NOTE", 35, QuadPlane, lidar_note, 50.0f),
+    AP_GROUPINFO("LIDAR_ADVICE", 36, QuadPlane, lidar_advice, 30.0f),
+    AP_GROUPINFO("ALT_NOTE", 37, QuadPlane, altitude_note, 15.0f),
+    AP_GROUPINFO("ALT_ADVICE", 38, QuadPlane, altitude_advice, 30.0f),
+    AP_GROUPINFO("WIND_ADVICE", 39, QuadPlane, wind_advice, 16.0f),
+    AP_GROUPINFO("WIND_CAUTION", 40, QuadPlane, wind_caution, 20.0f),
+    AP_GROUPINFO("H_ATT_CAUTION", 41, QuadPlane, hover_att_caution, 20.0f),
+    AP_GROUPINFO("F_POW_CAUTION", 42, QuadPlane, forward_power_caution, 2400.0f),
+    AP_GROUPINFO("H_POW_CAUTION", 43, QuadPlane, hover_power_caution, 5000.0f),
+    AP_GROUPINFO("ESC_T_CAUTION", 44, QuadPlane, esc_temp_caution, 85.0f),
+    AP_GROUPINFO("ARSP_TOL_NOTE", 45, QuadPlane, airspeed_tollerance_note, 4.0f),
+    AP_GROUPINFO("ARSP_TOL_NOTE", 46, QuadPlane, airspeed_tollerance_advice, 8.0f),
+
+
+
+
+
     AP_GROUPEND
 };
 
@@ -1498,13 +1519,15 @@ bool QuadPlane::assistance_needed()
 
     float aspeed;
     bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
-
+    hover_assist_detail = NO_DETAILS_AVAILIABLE;
     // Check for speed assist
     if (have_airspeed && assist_speed > 0 && aspeed < assist_speed) {
         if (!in_speed_assist) {
             in_speed_assist = true;
             gcs().send_text(MAV_SEVERITY_INFO, "Speed assist %d", (int)aspeed);
         }
+        hover_assist_detail += HOVER_ASSIST_REASON_SPEED;
+
     }
     else{
         in_speed_assist = false;
@@ -1516,6 +1539,7 @@ bool QuadPlane::assistance_needed()
             in_alt_assist = true;
             gcs().send_text(MAV_SEVERITY_INFO, "Alt assist %d", (int)plane.altitude_error_cm/100);
         }
+        hover_assist_detail += HOVER_ASSIST_REASON_ALT;
     }
     else{
         in_alt_assist = false;
@@ -1529,6 +1553,7 @@ bool QuadPlane::assistance_needed()
                                          (int)(labs(ahrs.roll_sensor - plane.nav_roll_cd) /100),
                                          (int)(labs(ahrs.pitch_sensor - plane.nav_pitch_cd)/100));
         }
+        hover_assist_detail += HOVER_ASSIST_REASON_ATTITUDE;
     }
     else{
         in_att_assist = false;
@@ -1540,6 +1565,379 @@ bool QuadPlane::assistance_needed()
  
     return false;
 }
+
+
+
+uint8_t QuadPlane::swoop_flight_status() const{
+    
+    if(!hal.util->get_soft_armed()){
+        return DISSARMED_ON_GROUND;
+    }
+    if(plane.control_mode == &plane.mode_qstabilize && motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE){
+        return MOTORS_IDLING;
+    }
+    if(plane.control_mode == &plane.mode_auto && is_vtol_takeoff(plane.mission.get_current_nav_cmd().id)){
+        return TAKEOFF;
+    }
+    if((transition_state != TRANSITION_DONE) && (transition_start_ms != 0) && transition_from_stationary){
+        return TRANSITION_TO_FORWARD_FLIGHT;
+    }
+    if(plane.control_mode == &plane.mode_auto && motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN ){
+        return FORWARD_FLIGHT;
+    }
+    if(in_vtol_land_approach()){
+        return TRANSITION_TO_HOVER;
+    }
+    if(in_vtol_land_search()){
+        return SEARCHING_FOR_TARGET;
+    }
+    if(in_vtol_land_sequence()){
+        return LANDING_STATUS;
+    }
+    if(plane.control_mode == &plane.mode_loiter){
+        return ORBIT;
+    }
+    if(plane.control_mode == &plane.mode_qland){
+        return EMERGENCY_LAND_STATUS;
+    }
+    if(plane.control_mode == &plane.mode_qrtl){
+        return ABORTING_TAKEOFF;
+    }
+
+    return STATUS_OTHER;
+
+
+}
+
+
+uint16_t QuadPlane::swoop_flags() const{
+    uint16_t returnValue = NO_FLAG ;
+    for(int i=0; i<16; i++){
+        returnValue += swoop_flag(1U<<i) << i;
+    }
+    return returnValue;
+}
+
+
+bool QuadPlane::swoop_flag(int flag_type) const{
+    return swoop_flag_level(flag_type)>NO_FLAG;
+}
+
+uint8_t QuadPlane::swoop_max_flag_level() const{
+    uint8_t returnValue = NO_FLAG ;
+    for(int i=0; i<16; i++){
+        if (swoop_flag_level(1U<<i) > returnValue){
+            returnValue = swoop_flag_level(1U<<i);
+        }
+    }
+    return returnValue;
+
+}
+
+uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
+    switch (flag_type)
+    {
+    case HOVER_ASSIST:{
+        if((transition_state != TRANSITION_DONE) && (transition_start_ms != 0) && !transition_from_stationary){
+            return NOTE;
+        }
+        return NO_FLAG;
+    }
+    case EMERGENCY_LAND:{
+        if(plane.control_mode == &plane.mode_qland || plane.control_mode == &plane.mode_qrtl){
+            return WARNING;
+        }
+        return NO_FLAG;
+    }
+    case GPS_HEALTH:
+        return plane.gps.swoop_net_health_status();
+
+    case VIBRATION: {
+        float vibrationLevel = plane.ins.get_vibration_levels().length();
+        int returnValue = NO_FLAG;
+        if (vibrationLevel > vibration_note){
+            returnValue = NOTE;
+        }
+        if (vibrationLevel > vibration_advice){
+            returnValue = ADVICE;
+        }
+        if (vibrationLevel > vibration_caution){
+            returnValue = CAUTION;
+        }
+        if (vibrationLevel > vibration_warning){
+            returnValue = WARNING;
+        }
+        return returnValue;
+    }
+
+    case HOVER_MOTORS:{
+        if(hover_motor_failed){
+            return ADVICE;
+        }
+        return NO_FLAG;   
+    }
+
+    case FORWARD_MOTORS:{
+        if(forward_motor_failed){
+            return CAUTION;
+        }
+        return NO_FLAG;   
+    }
+
+    case LIDAR: {
+        int returnValue = NO_FLAG;
+        if((plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::RangeFinder_Good)){
+            return ADVICE;
+        }
+        if(plane.rangefinder_state.in_range && plane.rangefinder_state.in_use && !in_vtol_mode()){
+            float distance = plane.rangefinder_state.height_estimate;
+            
+            if (distance < lidar_note){
+                returnValue = NOTE;
+            }
+            if (distance < lidar_advice){
+                returnValue = ADVICE;
+            }
+        }
+        return returnValue;
+    }
+
+    case HOVER_BATTERY:{
+        ////to_implement
+        return NO_FLAG;
+    }
+
+    case FORWARD_BATTERY:{
+        ////to_implement
+        return NO_FLAG;
+    }
+
+    case ALTITUDE:{
+        float altError = plane.altitude_error_cm* 1.0e-2f;
+        if (in_vtol_mode()) {
+            altError = pos_control->get_alt_error() * 1.0e-2f;
+        }
+
+
+        if (abs(altError)>altitude_advice){
+            return ADVICE;
+        }
+        else if(abs(altError)>altitude_note){
+            return NOTE;
+        }
+        return NO_FLAG;
+    }
+
+    case WIND:{
+        if (plane.ahrs.wind_estimate().length()>wind_caution){
+            return CAUTION;
+        }
+        else if(plane.ahrs.wind_estimate().length()>wind_advice){
+            return ADVICE;
+        }
+        return NO_FLAG;
+    }
+
+    case HOVER_ATTITUDE:{
+        if (((labs(ahrs.roll_sensor - plane.nav_roll_cd) > 100U*hover_att_caution || labs(ahrs.pitch_sensor - plane.nav_pitch_cd) > 100U*hover_att_caution))&& in_vtol_mode()){
+            return CAUTION;
+        }
+        return NO_FLAG;
+    }
+
+    case LANDING:{
+        ///to implement
+        return NO_FLAG;
+    }
+
+    case AERODYNAMIC:{
+        
+        #ifdef HAVE_AP_BLHELI_SUPPORT
+
+        AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+        if (blheli) {  
+            for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
+              
+                AP_BLHeli::telem_data td;
+                if(!blheli->get_telem_data(i, td) && td.temperature> esc_temp_caution ){
+                    return CAUTION;
+                }   
+            }
+        }
+        #endif
+
+        return NO_FLAG;
+    }
+
+    case AIRSPEED:{
+        int returnValue = NO_FLAG;
+        float aspeed;
+        bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
+        if(!in_vtol_mode() && !transition_from_stationary && have_airspeed){
+            if(abs((plane.target_airspeed_cm/100.0f)- aspeed)>airspeed_tollerance_advice){
+                returnValue = ADVICE;
+            }
+            if(abs((plane.target_airspeed_cm/100.0f) - aspeed)>airspeed_tollerance_note){
+                returnValue = NOTE;
+            }
+        }
+        if (ahrs.get_failed_airspeed_sensors()>0){
+            returnValue = ADVICE;
+        }
+        return returnValue;
+    }
+
+    case SERVO:{
+        ///to implement
+        return NO_FLAG;
+    }
+
+    }
+    return NO_FLAG;
+    
+}
+
+
+uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
+    switch (flag_type)
+    {
+    case HOVER_ASSIST:{
+        if((transition_state != TRANSITION_DONE) && (transition_start_ms != 0) && !transition_from_stationary){
+            return hover_assist_detail;
+        }
+        return NO_DETAILS_AVAILIABLE;
+    }
+    case EMERGENCY_LAND:{
+        if(plane.control_mode == &plane.mode_qland || plane.control_mode == &plane.mode_qrtl){
+            return emergency_land_detail;
+        }
+        return NO_DETAILS_AVAILIABLE;
+    }
+    case GPS_HEALTH:
+        if(swoop_flag_level(GPS_HEALTH)>0){
+            return  ((uint)GPS1_GOOD << plane.gps.swoop_health_status(0) )+ ((uint)GPS2_GOOD<<plane.gps.swoop_health_status(1));
+        }
+        
+        return NO_DETAILS_AVAILIABLE;
+        
+
+    case VIBRATION: {
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    case HOVER_MOTORS:{
+        if(hover_motor_failed){
+            return hover_motor_detail;
+        }
+        return NO_DETAILS_AVAILIABLE;  
+    }
+
+    case FORWARD_MOTORS:{
+        if(forward_motor_failed){
+            return forward_motor_detail;
+        }
+        return NO_DETAILS_AVAILIABLE;  
+    }
+
+    case LIDAR: {
+        int returnValue = NO_DETAILS_AVAILIABLE; 
+        if((plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::RangeFinder_Good)){
+            returnValue += LIDAR_FAILURE;
+        }
+        if(plane.rangefinder_state.in_range && plane.rangefinder_state.in_use && !in_vtol_mode()){
+            float distance = plane.rangefinder_state.height_estimate;
+            
+            if (distance < lidar_note){
+                returnValue += LIDAR_RANGE;
+            }
+            
+        }
+        return returnValue;
+    }
+
+    case HOVER_BATTERY:{
+        ////to_implement
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    case FORWARD_BATTERY:{
+        ////to_implement
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    case ALTITUDE:{
+        float altError = plane.altitude_error_cm* 1.0e-2f;
+        if (in_vtol_mode()) {
+            altError = pos_control->get_alt_error() * 1.0e-2f;
+        }
+
+
+        if (altError>0 && abs(altError)>altitude_note){
+            return ALTITUDE_LOW;
+        }
+        else if(altError<0 && abs(altError)>altitude_note){
+            return ALTITUDE_HIGH;
+        }
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    case WIND:{
+         return NO_DETAILS_AVAILIABLE;
+    }
+
+    case HOVER_ATTITUDE:{
+         return NO_DETAILS_AVAILIABLE;
+    }
+
+    case LANDING:{
+        ///to implement
+         return NO_DETAILS_AVAILIABLE;
+    }
+
+    case AERODYNAMIC:{
+        
+        if (swoop_flag_level(AERODYNAMIC)>0){
+            return(ESC_TEMP);
+        }
+
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    case AIRSPEED:{
+        int returnValue = NO_DETAILS_AVAILIABLE;
+        float aspeed;
+        bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
+        if(!in_vtol_mode() && !transition_from_stationary && have_airspeed){
+            if(abs((plane.target_airspeed_cm/100.0f) - aspeed)>airspeed_tollerance_note && plane.target_airspeed_cm/100 - aspeed >0 ){
+                returnValue += AIRSPEED_LOW;
+            }
+            else if(abs((plane.target_airspeed_cm/100.0f) - aspeed)>airspeed_tollerance_note){
+                returnValue += AIRSPEED_HIGH;
+            }
+        }
+        returnValue += (uint)ahrs.get_failed_airspeed_sensors()<<2;
+          
+        return returnValue;
+    }
+
+    case SERVO:{
+        ///to implement
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    }
+    return NO_DETAILS_AVAILIABLE;
+    
+}
+
+
+
+
+
+
+
+
+
 
 /*
   update for transition from quadplane to fixed wing mode
@@ -1564,6 +1962,8 @@ void QuadPlane::update_transition(void)
 
     const uint32_t now = millis();
 
+    emergency_land_detail = NO_DETAILS_AVAILIABLE;
+
     if (!hal.util->get_soft_armed()) {
         // reset the failure timer if we haven't started transitioning
         transition_start_ms = now;
@@ -1573,6 +1973,7 @@ void QuadPlane::update_transition(void)
         // Takeoff transition timeout expired
         if(transition_failure > 0 && transition_from_stationary  && ((now - transition_start_ms) > ((uint32_t)transition_failure * 1000))){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Transition failed, exceeded time limit");
+            emergency_land_detail = HOVER_ASSIST_LONG_TIMEOUT;
             if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
                 plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
             }
@@ -1583,6 +1984,7 @@ void QuadPlane::update_transition(void)
         // Hover assist transition timeout expired
         else if (assist_timeout >0 && !transition_from_stationary &&((now - transition_start_ms) > ((uint32_t)assist_timeout * 1000))){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, exceeded time limit");
+            emergency_land_detail = HOVER_ASSIST_LONG_TIMEOUT;
             if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
                 plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
             }
@@ -1593,6 +1995,7 @@ void QuadPlane::update_transition(void)
         // Too many related hover assist events have been requested
         else if (assist_strikes >0 and assist_strike_counter>= assist_strikes -1){
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Hover Assist Failed, too many attempts");
+            emergency_land_detail = HOVER_ASSIST_COUNTER_TIMEOUT;
             if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
                 plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
             }
@@ -2927,7 +3330,10 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
 #ifdef HAVE_AP_BLHELI_SUPPORT
    
     uint32_t now = AP_HAL::millis();
-    
+    forward_motor_failed = false;
+    forward_motor_detail = 0;
+    int forward_motor_count = -1;
+
     if(now-first_forward_motor_check_time<bl_startup_time){
         for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
             if ((((uint8_t)bl_fwd_motor_mask) & (1U<<i))) {
@@ -2953,6 +3359,7 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
         }
         else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
            
+            forward_motor_count++    
             if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
                
                 if (now-time_since_last_forward_blh_warning>4000){
@@ -2960,7 +3367,8 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
                     time_since_last_forward_blh_warning = now;
                 }
                 forward_motor_failed = true;
-                return;
+                forward_motor_detail += 1U << forward_motor_count;
+                
             }
         }
         else{
@@ -2970,7 +3378,7 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
    
     #endif
 
-    forward_motor_failed = false;
+
     return;
   
 }
@@ -2982,7 +3390,8 @@ if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN 
     hover_motor_failed = false;
     return;
 }
-
+hover_motor_detail =0;
+hover_motor_failed = false;
 
 #ifdef HAVE_AP_BLHELI_SUPPORT
    
@@ -3001,12 +3410,15 @@ if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN 
         return;
     }
 
-        AP_BLHeli *blheli = AP_BLHeli::get_singleton();
-        if (!blheli) {
-            hover_motor_failed = false;
-            return;
-        }
+    AP_BLHeli *blheli = AP_BLHeli::get_singleton();
+    if (!blheli) {
+           hover_motor_failed = false;
+        return;
+    }
+
     
+    int hover_motor_number = -1;
+
     for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
               
         AP_BLHeli::telem_data td;
@@ -3016,16 +3428,16 @@ if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN 
             
         }
         else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
-           
+            hover_motor_number++;
             if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
                
                 if (now-time_since_last_blh_warning>4000){
                     gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor %d not running!", i+1);
                     time_since_last_blh_warning = now;
                 }
-
+                hover_motor_detail += 1U << hover_motor_number;
                 hover_motor_failed = true;
-                return;
+                
             }
                 
             
@@ -3034,9 +3446,10 @@ if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN 
             bl_last_spinning_packet[i]=now;
         }
     }
+    
 #endif
 
-hover_motor_failed = false;
+
 return;
   
 }
@@ -3599,6 +4012,15 @@ bool QuadPlane::in_vtol_land_approach(void) const
 {
     if (in_vtol_auto() && is_vtol_land(plane.mission.get_current_nav_cmd().id) &&
         (poscontrol.state == QPOS_POSITION1 || poscontrol.state == QPOS_POSITION2)) {
+        return true;
+    }
+    return false;
+}
+
+bool QuadPlane::in_vtol_land_search(void) const
+{
+    if (in_vtol_auto() && is_vtol_land(plane.mission.get_current_nav_cmd().id) &&
+        (poscontrol.state == QPOS_POSITION3 )) {
         return true;
     }
     return false;

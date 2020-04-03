@@ -71,6 +71,22 @@ public:
         return initialised;
     }
 
+    uint16_t swoop_flags() const;
+    uint8_t swoop_flight_status() const;
+    
+    uint16_t get_forward_endurance() const;
+    uint8_t get_forward_health() const;
+    uint8_t get_forward_percent_remaining() const;
+
+    bool swoop_flag(int flag_type) const;
+    uint8_t swoop_flag_level(int flag_type) const;
+    uint8_t swoop_max_flag_level() const;
+    uint8_t swoop_flag_detail(int flag_type) const;
+    
+
+
+
+
     // is quadplane assisting?
     bool in_assisted_flight(void) const {
         return available() && assisted_flight;
@@ -139,6 +155,8 @@ public:
 
     // return true if the wp_nav controller is being updated
     bool using_wp_nav(void) const;
+
+
 
     // return true if the user has set ENABLE
     bool enabled(void) const { return enable != 0; }
@@ -392,6 +410,28 @@ private:
     // last throttle value when active
     float last_throttle;
 
+    int hover_assist_detail;
+    int emergency_land_detail;
+    int hover_motor_detail;
+    int forward_motor_detail;
+
+    AP_Float vibration_note;
+    AP_Float vibration_advice;
+    AP_Float vibration_caution;
+    AP_Float vibration_warning;
+    AP_Float lidar_note;
+    AP_Float lidar_advice;
+    AP_Float altitude_note;
+    AP_Float altitude_advice;
+    AP_Float wind_advice;
+    AP_Float wind_caution;
+    AP_Float hover_att_caution;
+    AP_Float forward_power_caution;
+    AP_Float hover_power_caution;
+    AP_Float esc_temp_caution;
+    AP_Float airspeed_tollerance_note;
+    AP_Float airspeed_tollerance_advice;
+
     // pitch when we enter loiter mode
     int32_t loiter_initial_pitch_cd;
 
@@ -602,6 +642,8 @@ private:
       are we in the approach phase of a VTOL landing?
      */
     bool in_vtol_land_approach(void) const;
+
+    bool in_vtol_land_search(void) const;
 
     /*
       are we in the descent phase of a VTOL landing?

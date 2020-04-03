@@ -148,6 +148,26 @@ uint16_t AP_Arming::get_enabled_checks()
     return checks_to_perform;
 }
 
+uint8_t  AP_Arming::arm_check_status() const { 
+    if (arming_check_detail_1 == 0 && arming_check_detail_2 == 0 && arming_check_detail_common == 0){
+        return 1;
+    }
+    return 0;
+} 
+
+uint16_t  AP_Arming::arm_check_detail_1() const { 
+    return arming_check_detail_1;
+}
+
+uint16_t  AP_Arming::arm_check_detail_2() const { 
+    return arming_check_detail_2;
+}
+
+uint16_t  AP_Arming::arm_check_detail_common() const { 
+    return arming_check_detail_common;
+}
+
+
 bool AP_Arming::check_enabled(const enum AP_Arming::ArmingChecks check) const
 {
     if (checks_to_perform & ARMING_CHECK_ALL) {
@@ -197,6 +217,7 @@ bool AP_Arming::barometer_checks(bool report)
         (checks_to_perform & ARMING_CHECK_BARO)) {
         if (!AP::baro().all_healthy()) {
             check_failed(ARMING_CHECK_BARO, report, "Barometer not healthy");
+            arming_check_detail_1 += BAROMETER_NOT_HEALTHY;
             return false;
         }
     }
@@ -216,6 +237,7 @@ bool AP_Arming::airspeed_checks(bool report)
         for (uint8_t i=0; i<AIRSPEED_MAX_SENSORS; i++) {
             if (airspeed->enabled(i) &&  !airspeed->use(i)) {
                 check_failed(ARMING_CHECK_AIRSPEED, report, "Airspeed %d not healthy", i + 1);
+                arming_check_detail_2 += 1U<<i;
                 return false;
             }
         }
@@ -234,10 +256,12 @@ bool AP_Arming::logging_checks(bool report)
         }
         if (AP::logger().logging_failed()) {
             check_failed(ARMING_CHECK_LOGGING, report, "Logging failed");
+            arming_check_detail_2 += LOGGING_FAILED;
             return false;
         }
         if (!AP::logger().CardInserted()) {
             check_failed(ARMING_CHECK_LOGGING, report, "No SD card");
+            arming_check_detail_2 += NO_SD_CARD;
             return false;
         }
     }
@@ -321,36 +345,43 @@ bool AP_Arming::ins_checks(bool report)
         const AP_InertialSensor &ins = AP::ins();
         if (!ins.get_gyro_health_all()) {
             check_failed(ARMING_CHECK_INS, report, "Gyros not healthy");
+            arming_check_detail_common += GYRO_NOT_HEALTHY;
             return false;
         }
         if (!ins.gyro_calibrated_ok_all()) {
             check_failed(ARMING_CHECK_INS, report, "Gyros not calibrated");
+            arming_check_detail_1 += GYRO_NOT_CALIBRATED;
             return false;
         }
         if (!ins.get_accel_health_all()) {
             check_failed(ARMING_CHECK_INS, report, "Accels not healthy");
+            arming_check_detail_common += ACCELS_NOT_HEALTHY;
             return false;
         }
         if (!ins.accel_calibrated_ok_all()) {
             check_failed(ARMING_CHECK_INS, report, "3D Accel calibration needed");
+            arming_check_detail_1 += ACCELS_NOT_CALIBRATED;
             return false;
         }
         
         //check if accelerometers have calibrated and require reboot
         if (ins.accel_cal_requires_reboot()) {
             check_failed(ARMING_CHECK_INS, report, "Accels calibrated requires reboot");
+            arming_check_detail_1 += ACCELS_NOT_CALIBRATED;
             return false;
         }
 
         // check all accelerometers point in roughly same direction
         if (!ins_accels_consistent(ins)) {
             check_failed(ARMING_CHECK_INS, report, "Accels inconsistent");
+            arming_check_detail_1 += ACCELS_INCONSISTENT;
             return false;
         }
 
         // check all gyros are giving consistent readings
         if (!ins_gyros_consistent(ins)) {
             check_failed(ARMING_CHECK_INS, report, "Gyros inconsistent");
+            arming_check_detail_1 += GYROS_INCONSISTENT;
             return false;
         }
 
@@ -372,12 +403,14 @@ bool AP_Arming::compass_checks(bool report)
     // check if compass is calibrating
     if (_compass.is_calibrating()) {
         check_failed(report, "Compass calibration running");
+        arming_check_detail_1 += COMPASS_NOT_CALIBRATED;
         return false;
     }
 
     // check if compass has calibrated and requires reboot
     if (_compass.compass_cal_requires_reboot()) {
         check_failed(report, "Compass calibrated requires reboot");
+        arming_check_detail_1 += COMPASS_NOT_CALIBRATED;
         return false;
     }
 
@@ -393,11 +426,13 @@ bool AP_Arming::compass_checks(bool report)
 
         if (!_compass.healthy()) {
             check_failed(ARMING_CHECK_COMPASS, report, "Compass not healthy");
+            arming_check_detail_common += COMPASS_NOT_HEALTHY;
             return false;
         }
         // check compass learning is on or offsets have been set
         if (!_compass.learn_offsets_enabled() && !_compass.configured()) {
             check_failed(ARMING_CHECK_COMPASS, report, "Compass not calibrated");
+            arming_check_detail_1 += COMPASS_NOT_CALIBRATED;
             return false;
         }
 
@@ -405,6 +440,7 @@ bool AP_Arming::compass_checks(bool report)
         const Vector3f offsets = _compass.get_offsets();
         if (offsets.length() > _compass.get_offsets_max()) {
             check_failed(ARMING_CHECK_COMPASS, report, "Compass offsets too high");
+            arming_check_detail_1 += COMPASS_OFFSETS;
             return false;
         }
 
@@ -412,12 +448,14 @@ bool AP_Arming::compass_checks(bool report)
         const float mag_field = _compass.get_field().length();
         if (mag_field > AP_ARMING_COMPASS_MAGFIELD_MAX || mag_field < AP_ARMING_COMPASS_MAGFIELD_MIN) {
             check_failed(ARMING_CHECK_COMPASS, report, "Check mag field");
+            arming_check_detail_common += HIGH_MAG_FIELD_STRENGTH;
             return false;
         }
 
         // check all compasses point in roughly same direction
         if (!_compass.consistent()) {
             check_failed(ARMING_CHECK_COMPASS, report, "Compasses inconsistent");
+            arming_check_detail_common += COMPASS_INCONSISTENT;
             return false;
         }
     }
@@ -434,12 +472,14 @@ bool AP_Arming::gps_checks(bool report)
         if (!AP::ahrs().home_is_set() ||
             gps.status() < AP_GPS::GPS_OK_FIX_3D) {
             check_failed(ARMING_CHECK_GPS, report, "Bad GPS Position");
+            arming_check_detail_common += BAD_GPS_POSITION;
             return false;
         }
 
         //GPS update rate acceptable
         if (!gps.all_healthy()) {
             check_failed(ARMING_CHECK_GPS, report, "GPS is not healthy");
+            arming_check_detail_common += GPS_NOT_HEALTHY;
             return false;
         }
 
@@ -448,10 +488,12 @@ bool AP_Arming::gps_checks(bool report)
         if (!gps.all_consistent(distance_m)) {
             check_failed(ARMING_CHECK_GPS, report, "GPS positions differ by %4.1fm",
                          (double)distance_m);
+            arming_check_detail_common += GPS_POSITIONS_DIFFERENT;
             return false;
         }
         if (!gps.blend_health_check()) {
             check_failed(ARMING_CHECK_GPS, report, "GPS blending unhealthy");
+            arming_check_detail_1 += GPS_BLENDING_UNHEALTHY;
             return false;
         }
 
@@ -462,6 +504,7 @@ bool AP_Arming::gps_checks(bool report)
             const float distance = gps_loc.get_distance(ahrs_loc);
             if (distance > AP_ARMING_AHRS_GPS_ERROR_MAX) {
                 check_failed(ARMING_CHECK_GPS, report, "GPS and AHRS differ by %4.1fm", (double)distance);
+                arming_check_detail_common += GPS_DIFFERENT_TO_EKF;
                 return false;
             }
         }
@@ -476,6 +519,9 @@ bool AP_Arming::gps_checks(bool report)
                          first_unconfigured + 1);
             if (report) {
                 gps.broadcast_first_configuration_failure_reason();
+            }
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
             }
             return false;
         }
@@ -492,6 +538,7 @@ bool AP_Arming::battery_checks(bool report)
         char buffer[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1] {};
         if (!AP::battery().arming_checks(sizeof(buffer), buffer)) {
             check_failed(ARMING_CHECK_BATTERY, report, "%s", buffer);
+            arming_check_detail_2 += BATTERY_PROBLEM;
             return false;
         }
      }
@@ -506,6 +553,7 @@ bool AP_Arming::hardware_safety_check(bool report)
       // check if safety switch has been pushed
       if (hal.util->safety_switch_state() == AP_HAL::Util::SAFETY_DISARMED) {
           check_failed(ARMING_CHECK_SWITCH, report, "Hardware safety switch");
+          arming_check_detail_1 += SAFETY_SWITCH_DISSABLED;
           return false;
       }
     }
@@ -528,10 +576,16 @@ bool AP_Arming::rc_calibration_checks(bool report)
         const uint16_t trim = c->get_radio_trim();
         if (c->get_radio_min() > trim) {
             check_failed(ARMING_CHECK_RC, report, "RC%d minimum is greater than trim", i + 1);
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
+            }
             check_passed = false;
         }
         if (c->get_radio_max() < trim) {
             check_failed(ARMING_CHECK_RC, report, "RC%d maximum is less than trim", i + 1);
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
+            }
             check_passed = false;
         }
     }
@@ -546,6 +600,7 @@ bool AP_Arming::manual_transmitter_checks(bool report)
 
         if (AP_Notify::flags.failsafe_radio) {
             check_failed(ARMING_CHECK_RC, report, "Radio failsafe on");
+            arming_check_detail_2 += MANUAL_TRANSMITTER_PROBLEM;
             return false;
         }
 
@@ -564,6 +619,7 @@ bool AP_Arming::mission_checks(bool report)
         AP_Mission *mission = AP::mission();
         if (mission == nullptr) {
             check_failed(ARMING_CHECK_MISSION, report, "No mission library present");
+            arming_check_detail_2 += NO_MISSION_LOADED;
             #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
                 AP_HAL::panic("Mission checks requested, but no mission was allocated");
             #endif // CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -572,6 +628,7 @@ bool AP_Arming::mission_checks(bool report)
         AP_Rally *rally = AP::rally();
         if (rally == nullptr) {
             check_failed(ARMING_CHECK_MISSION, report, "No rally library present");
+            arming_check_detail_2 += MISSION_MISSING_ELEMENTS;
             #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
                 AP_HAL::panic("Mission checks requested, but no rally was allocated");
             #endif // CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -593,6 +650,10 @@ bool AP_Arming::mission_checks(bool report)
             if (_required_mission_items & misChecks[i].check) {
                 if (!mission->contains_item(misChecks[i].mis_item_type)) {
                     check_failed(ARMING_CHECK_MISSION, report, "Missing mission item: %s", misChecks[i].type);
+                    
+                    if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
+                        arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+                    }
                     return false;
                 }
             }
@@ -601,11 +662,17 @@ bool AP_Arming::mission_checks(bool report)
             Location ahrs_loc;
             if (!AP::ahrs().get_position(ahrs_loc)) {
                 check_failed(ARMING_CHECK_MISSION, report, "Can't check rally without position");
+                if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
+                    arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+                }
                 return false;
             }
             RallyLocation rally_loc = {};
             if (!rally->find_nearest_rally_point(ahrs_loc, rally_loc)) {
                 check_failed(ARMING_CHECK_MISSION, report, "No sufficently close rally point located");
+                if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
+                    arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+                }
                 return false;
             }
           }
@@ -625,6 +692,7 @@ bool AP_Arming::rangefinder_checks(bool report)
         char buffer[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1];
         if (!range->prearm_healthy(buffer, ARRAY_SIZE(buffer))) {
             check_failed(ARMING_CHECK_RANGEFINDER, report, "%s", buffer);
+            arming_check_detail_1 += RANGEFINDER_NOT_HEALTHY;
             return false;
         }
     }
@@ -632,7 +700,7 @@ bool AP_Arming::rangefinder_checks(bool report)
     return true;
 }
 
-bool AP_Arming::servo_checks(bool report) const
+bool AP_Arming::servo_checks(bool report)
 {
     bool check_passed = true;
     for (uint8_t i = 0; i < NUM_SERVO_CHANNELS; i++) {
@@ -644,10 +712,16 @@ bool AP_Arming::servo_checks(bool report) const
         const uint16_t trim = c->get_trim();
         if (c->get_output_min() > trim) {
             check_failed(report, "SERVO%d minimum is greater than trim", i + 1);
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
+            }
             check_passed = false;
         }
         if (c->get_output_max() < trim) {
             check_failed(report, "SERVO%d maximum is less than trim", i + 1);
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
+            }
             check_passed = false;
         }
     }
@@ -655,6 +729,9 @@ bool AP_Arming::servo_checks(bool report) const
 #if HAL_WITH_IO_MCU
     if (!iomcu.healthy()) {
         check_failed(report, "IOMCU is unhealthy");
+        if (!arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR){
+            arming_check_detail_1 += AUTOPILOT_INTERNAL_SYSTEM_ERROR;
+        }
         check_passed = false;
     }
 #endif
@@ -671,6 +748,9 @@ bool AP_Arming::board_voltage_checks(bool report)
         const float vbus_min = AP_BoardConfig::get_minimum_board_voltage();
         if(((bus_voltage < vbus_min) || (bus_voltage > AP_ARMING_BOARD_VOLTAGE_MAX))) {
             check_failed(ARMING_CHECK_VOLTAGE, report, "Board (%1.1fv) out of range %1.1f-%1.1fv", (double)bus_voltage, (double)vbus_min, (double)AP_ARMING_BOARD_VOLTAGE_MAX);
+            if (!(arming_check_detail_1 & AUTOPILOT_VOLTAGE_ERROR)){
+                arming_check_detail_1 += AUTOPILOT_VOLTAGE_ERROR;
+            }
             return false;
         }
 #endif // HAL_HAVE_BOARD_VOLTAGE
@@ -681,6 +761,9 @@ bool AP_Arming::board_voltage_checks(bool report)
             const float servo_voltage =  hal.analogin->servorail_voltage();
             if (servo_voltage < vservo_min) {
                 check_failed(ARMING_CHECK_VOLTAGE, report, "Servo voltage to low (%1.2fv < %1.2fv)", (double)servo_voltage, (double)vservo_min);
+                if (!(arming_check_detail_1 & AUTOPILOT_VOLTAGE_ERROR)){
+                    arming_check_detail_1 += AUTOPILOT_VOLTAGE_ERROR;
+                }
                 return false;
             }
         }
@@ -698,12 +781,18 @@ bool AP_Arming::system_checks(bool report)
     if (check_enabled(ARMING_CHECK_SYSTEM)) {
         if (!hal.storage->healthy()) {
             check_failed(ARMING_CHECK_SYSTEM, report, "Param storage failed");
+            if (!(arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR)){
+                arming_check_detail_1 += AUTOPILOT_INTERNAL_SYSTEM_ERROR;
+            }
             return false;
         }
 #if AP_TERRAIN_AVAILABLE
         const AP_Terrain *terrain = AP_Terrain::get_singleton();
         if ((terrain != nullptr) && terrain->init_failed()) {
             check_failed(ARMING_CHECK_SYSTEM, report, "Terrain out of memory");
+            if (!(arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR)){
+                arming_check_detail_1 += AUTOPILOT_INTERNAL_SYSTEM_ERROR;
+            }
             return false;
         }
 #endif
@@ -711,12 +800,18 @@ bool AP_Arming::system_checks(bool report)
         const AP_Scripting *scripting = AP_Scripting::get_singleton();
         if ((scripting != nullptr) && scripting->enabled() && scripting->init_failed()) {
             check_failed(ARMING_CHECK_SYSTEM, report, "Scripting out of memory");
+            if (!(arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR)){
+                arming_check_detail_1 += AUTOPILOT_INTERNAL_SYSTEM_ERROR;
+            }
             return false;
         }
 #endif
     }
     if (AP::internalerror().errors() != 0) {
         check_failed(report, "Internal errors (0x%x)", (unsigned int)AP::internalerror().errors());
+        if (!(arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR)){
+            arming_check_detail_1 += AUTOPILOT_INTERNAL_SYSTEM_ERROR;
+        }
         return false;
     }
 
@@ -725,7 +820,7 @@ bool AP_Arming::system_checks(bool report)
 
 
 // check nothing is too close to vehicle
-bool AP_Arming::proximity_checks(bool report) const
+bool AP_Arming::proximity_checks(bool report) 
 {
     const AP_Proximity *proximity = AP::proximity();
     // return true immediately if no sensor present
@@ -739,6 +834,7 @@ bool AP_Arming::proximity_checks(bool report) const
     // return false if proximity sensor unhealthy
     if (proximity->get_status() < AP_Proximity::Status::Good) {
         check_failed(report, "check proximity sensor");
+        arming_check_detail_1 += PROXIMITY_ERROR;
         return false;
     }
 
@@ -759,6 +855,9 @@ bool AP_Arming::can_checks(bool report)
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter) || APM_BUILD_TYPE(APM_BUILD_ArduPlane) || APM_BUILD_TYPE(APM_BUILD_ArduSub)
                     AP_KDECAN *ap_kdecan = AP_KDECAN::get_kdecan(i);
                     snprintf(fail_msg, ARRAY_SIZE(fail_msg), "KDECAN failed");
+                    if (!(arming_check_detail_1 & CAN_BUS_NOT_HEALTHY)){
+                        arming_check_detail_1 += CAN_BUS_NOT_HEALTHY;
+                    }
                     if (ap_kdecan != nullptr && !ap_kdecan->pre_arm_check(fail_msg, ARRAY_SIZE(fail_msg))) {
                         check_failed(ARMING_CHECK_SYSTEM, report, "%s", fail_msg);
                         return false;
@@ -769,6 +868,9 @@ bool AP_Arming::can_checks(bool report)
                 case AP_BoardConfig_CAN::Protocol_Type_UAVCAN:
                 {
                     snprintf(fail_msg, ARRAY_SIZE(fail_msg), "UAVCAN failed");
+                    if (!(arming_check_detail_1 & CAN_BUS_NOT_HEALTHY)){
+                        arming_check_detail_1 += CAN_BUS_NOT_HEALTHY;
+                    }
                     if (!AP::uavcan_server().prearm_check(fail_msg, ARRAY_SIZE(fail_msg))) {
                         check_failed(ARMING_CHECK_SYSTEM, report, "%s", fail_msg);
                         return false;
@@ -800,8 +902,12 @@ bool AP_Arming::fence_checks(bool display_failure)
 
     if (fail_msg == nullptr) {
         check_failed(display_failure, "Check fence");
+        
     } else {
         check_failed(display_failure, "%s", fail_msg);
+    }
+    if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
+        arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
     }
 
     return false;
@@ -816,7 +922,9 @@ bool AP_Arming::pre_arm_checks(bool report)
         return true;
     }
 #endif
-
+arming_check_detail_1 = 0;
+    arming_check_detail_2 = 0;
+    arming_check_detail_common = 0;
     return hardware_safety_check(report)
         &  barometer_checks(report)
         &  ins_checks(report)

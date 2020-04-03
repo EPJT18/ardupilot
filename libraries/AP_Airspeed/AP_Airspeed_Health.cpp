@@ -67,7 +67,8 @@ const uint32_t now_ms = AP_HAL::millis();
             gcs().send_text(MAV_SEVERITY_ERROR, "Airspeed sensor %d failure. Disabling", i+1);
             state[i].failures.param_use_backup = param[i].use;
             param[i].use.set_and_notify(0);
-            state[i].healthy = false;
+            state[i].failures.has_failed = true;
+            
 
         // and is probably getting close to not healthy
         } else if ((state[i].failures.health_probability < DISABLE_PROB_THRESH_WARN) && !state[i].failures.has_warned) {
@@ -85,10 +86,13 @@ const uint32_t now_ms = AP_HAL::millis();
         state[i].failures.health_probability > RE_ENABLE_PROB_THRESH_OK) {
 
         gcs().send_text(MAV_SEVERITY_NOTICE, "Airspeed sensor %d now OK. Re-enabled", i+1);
+        state[i].failures.has_failed = false;
         param[i].use.set_and_notify(state[i].failures.param_use_backup); // resume
         state[i].failures.param_use_backup = -1; // set to invalid so we don't use it
         state[i].failures.has_warned = false;
+        
     }
+   
 }
 
 void AP_Airspeed::check_sensor_values_consistent(uint8_t i)

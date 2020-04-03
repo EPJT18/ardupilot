@@ -411,6 +411,7 @@ void AP_Airspeed::init()
 
         // Set the enable automatically to false and set the probability that the airspeed is healhy to start with
         state[i].failures.health_probability = 1.0f;
+        state[i].failures.has_failed = false;
         state[i].error_neg =1.0f;
         state[i].error_neg =1.0f;
 
@@ -570,6 +571,16 @@ float AP_Airspeed::get_raw_airspeed(void) const{
 
 }
 
+uint8_t AP_Airspeed::get_failed_sensors(void) const{
+    uint8_t returnValue=0;
+    for (uint8_t j=0; j<AIRSPEED_MAX_SENSORS; j++) {
+        if (state[j].failures.has_failed && enabled(j)){
+            returnValue +=1U<<j;
+        }
+    }
+    return returnValue;
+}
+
 float AP_Airspeed::get_airspeed(void) const{
     float health_sum = 0;
     float airspeed_sum = 0;
@@ -588,7 +599,7 @@ float AP_Airspeed::get_airspeed(void) const{
 }
 bool AP_Airspeed::healthy(void) const{
     for (uint8_t j=0; j<AIRSPEED_MAX_SENSORS; j++) {
-        if (state[j].healthy && (fabsf(param[j].offset) > 0 || state[j].use_zero_offset) && enabled(j)){
+        if (!state[j].failures.has_failed && (fabsf(param[j].offset) > 0 || state[j].use_zero_offset) && enabled(j)){
             return true;
         }
     }

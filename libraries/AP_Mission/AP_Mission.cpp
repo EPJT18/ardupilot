@@ -388,6 +388,14 @@ int32_t AP_Mission::get_next_ground_course_cd(int32_t default_angle)
     return _nav_cmd.content.location.get_bearing_to(cmd.content.location);
 }
 
+uint16_t AP_Mission::get_next_nav_cmd_id() {
+    Mission_Command cmd;
+    if (!get_next_nav_cmd(_nav_cmd.index+1, cmd)) {
+        return 0;
+    }
+    return cmd.id;
+}
+
 
 Location AP_Mission::get_next_location(Location defaultLocation){
     Mission_Command cmd;

@@ -94,6 +94,8 @@ public:
     // if we have an estimate
     bool airspeed_estimate(float *airspeed_ret) const override;
 
+    int get_failed_airspeed_sensors() const;
+
     bool            use_compass() override;
 
     bool set_home(const Location &loc) override WARN_IF_UNUSED;

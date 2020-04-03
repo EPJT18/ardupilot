@@ -793,6 +793,11 @@ private:
     void update_nav_roll_smoothing(void);
     int8_t sgn(int32_t x);
     void send_fence_status(mavlink_channel_t chan);
+    void send_swoop_flags(mavlink_channel_t chan);
+    void send_swoop_arming_flags(mavlink_channel_t chan);
+    void send_swoop_status(mavlink_channel_t chan);
+    void send_swoop_energy(mavlink_channel_t chan);
+
     void send_servo_out(mavlink_channel_t chan);
     void send_wind(mavlink_channel_t chan);
 

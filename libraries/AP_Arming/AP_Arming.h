@@ -68,6 +68,16 @@ public:
     // checks.  Those go here:
     virtual bool arm_checks(AP_Arming::Method method);
 
+    uint8_t arm_check_status() const;
+
+    uint16_t arm_check_detail_1() const;
+
+    uint16_t arm_check_detail_2() const;
+
+    uint16_t arm_check_detail_common() const;
+
+    
+
     // get expected magnetic field strength
     uint16_t compass_magfield_expected() const;
 
@@ -90,6 +100,9 @@ protected:
     AP_Float                accel_error_threshold;
     AP_Int8                 _rudder_arming;
     AP_Int32                 _required_mission_items;
+    uint16_t                arming_check_detail_1;
+    uint16_t                arming_check_detail_2;
+    uint16_t                arming_check_detail_common;
 
     // internal members
     bool                    armed;
@@ -128,9 +141,9 @@ protected:
 
     bool can_checks(bool report);
 
-    virtual bool proximity_checks(bool report) const;
+    virtual bool proximity_checks(bool report) ;
 
-    bool servo_checks(bool report) const;
+    bool servo_checks(bool report) ;
     bool rc_checks_copter_sub(bool display_failure, const RC_Channel *channels[4]) const;
 
     // mandatory checks that cannot be bypassed.  This function will only be called if ARMING_CHECK is zero or arming forced

@@ -68,6 +68,8 @@ public:
 
     float get_raw_airspeed(void) const;// { return get_raw_airspeed(primary); }
 
+    uint8_t get_failed_sensors(void) const;
+
     // return the current airspeed ratio (dimensionless)
     float get_airspeed_ratio(uint8_t i) const {
         return param[i].ratio;
@@ -113,7 +115,7 @@ public:
 
     // return health status of sensor
     bool healthy(uint8_t i) const {
-        bool ok = state[i].healthy && enabled(i);
+        bool ok = state[i].healthy && enabled(i) && !state[i].failures.has_failed;
 #ifndef HAL_BUILD_AP_PERIPH
         ok &= (fabsf(param[i].offset) > 0 || state[i].use_zero_offset);
 #endif
@@ -214,6 +216,7 @@ private:
             float health_probability;
             int8_t param_use_backup;
             bool has_warned;
+            bool has_failed;
         } failures;
     } state[AIRSPEED_MAX_SENSORS];
 

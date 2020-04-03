@@ -429,6 +429,9 @@ public:
     bool all_healthy(void) const;
     bool is_healthy(void) const { return is_healthy(primary_instance); }
 
+    bool swoop_health_flag(void) const;
+    uint8_t swoop_health_status(uint8_t instance) const;
+    uint8_t swoop_net_health_status(void) const;
 
     // returns true if all GPS instances have passed all final arming checks/state changes
     bool prepare_for_arming(void);
@@ -462,6 +465,11 @@ protected:
     AP_Int16 _delay_ms[GPS_MAX_RECEIVERS];
     AP_Int8 _blend_mask;
     AP_Float _blend_tc;
+
+    AP_Float _degraded_hdop_threshold;
+    AP_Float _sig_degraded_hdop_threshold;
+    AP_Float _degraded_sats_threshold;
+    AP_Float _sig_degraded_sats_threshold;
 
     uint32_t _log_gps_bit = -1;
 

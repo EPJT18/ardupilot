@@ -31,6 +31,10 @@ bool AP_Arming_Plane::pre_arm_checks(bool display_failure)
         return true;
     }
 
+    arming_check_detail_1 = 0;
+    arming_check_detail_2 = 0;
+    arming_check_detail_common = 0;
+
     // call parent class checks
     bool ret = AP_Arming::pre_arm_checks(display_failure);
 
@@ -39,21 +43,33 @@ bool AP_Arming_Plane::pre_arm_checks(bool display_failure)
 
     if (plane.g.fs_timeout_long < plane.g.fs_timeout_short && plane.g.fs_action_short != FS_ACTION_SHORT_DISABLED) {
         check_failed(display_failure, "FS_LONG_TIMEOUT < FS_SHORT_TIMEOUT");
+        if (!(arming_check_detail_1 & BAD_PARAMS)){
+            arming_check_detail_1 += BAD_PARAMS;
+        }       
         ret = false;
     }
 
     if (plane.aparm.roll_limit_cd < 300) {
         check_failed(display_failure, "LIM_ROLL_CD too small (%u)", (unsigned)plane.aparm.roll_limit_cd);
+        if (!(arming_check_detail_1 & BAD_PARAMS)){
+            arming_check_detail_1 += BAD_PARAMS;
+        }
         ret = false;
     }
 
     if (plane.aparm.pitch_limit_max_cd < 300) {
         check_failed(display_failure, "LIM_PITCH_MAX too small (%u)", (unsigned)plane.aparm.pitch_limit_max_cd);
         ret = false;
+        if (!(arming_check_detail_1 & BAD_PARAMS)){
+            arming_check_detail_1 += BAD_PARAMS;
+        }
     }
 
     if (plane.aparm.pitch_limit_min_cd > -300) {
         check_failed(display_failure, "LIM_PITCH_MIN too large (%u)", (unsigned)plane.aparm.pitch_limit_min_cd);
+        if (!(arming_check_detail_1 & BAD_PARAMS)){
+            arming_check_detail_1 += BAD_PARAMS;
+        }        
         ret = false;
     }
 
@@ -62,16 +78,23 @@ bool AP_Arming_Plane::pre_arm_checks(bool display_failure)
         plane.g.throttle_fs_value < 
         plane.channel_throttle->get_radio_max()) {
         check_failed(display_failure, "Invalid THR_FS_VALUE for rev throttle");
+        if (!(arming_check_detail_1 & BAD_PARAMS)){
+            arming_check_detail_1 += BAD_PARAMS;
+        }
         ret = false;
     }
 
     if (plane.quadplane.enabled() && !plane.quadplane.available()) {
         check_failed(display_failure, "Quadplane enabled but not running");
+        arming_check_detail_2 += QUADPLANE_NOT_RUNNING;
         ret = false;
     }
 
     if (plane.quadplane.available() && plane.scheduler.get_loop_rate_hz() < 100) {
         check_failed(display_failure, "quadplane needs SCHED_LOOP_RATE >= 100");
+        if (!(arming_check_detail_1 & BAD_PARAMS)){
+            arming_check_detail_1 += BAD_PARAMS;
+        }
         ret = false;
     }
 
@@ -80,27 +103,38 @@ bool AP_Arming_Plane::pre_arm_checks(bool display_failure)
         char failure_msg[50];
         if (!plane.quadplane.pos_control->pre_arm_checks("PSC", failure_msg, ARRAY_SIZE(failure_msg))) {
             check_failed(ARMING_CHECK_PARAMETERS, display_failure, "Bad parameter: %s", failure_msg);
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
+            }
             return false;
         }
         if (!plane.quadplane.attitude_control->pre_arm_checks("ATC", failure_msg, ARRAY_SIZE(failure_msg))) {
             check_failed(ARMING_CHECK_PARAMETERS, display_failure, "Bad parameter: %s", failure_msg);
+            if (!(arming_check_detail_1 & BAD_PARAMS)){
+                arming_check_detail_1 += BAD_PARAMS;
+            }            
             return false;
         }
     }
 
     if (plane.control_mode == &plane.mode_auto && plane.mission.num_commands() <= 1) {
         check_failed(display_failure, "No mission loaded");
+        if (!(arming_check_detail_2 & NO_MISSION_LOADED)){
+            arming_check_detail_2 += NO_MISSION_LOADED; 
+        } 
         ret = false;
     }
 
     // check adsb avoidance failsafe
     if (plane.failsafe.adsb) {
         check_failed(display_failure, "ADSB threat detected");
+        arming_check_detail_common += ADSB_THREAT;
         ret = false;
     }
 
     if (SRV_Channels::get_emergency_stop()) {
         check_failed(display_failure,"Motors Emergency Stopped");
+        arming_check_detail_1 += MOTORS_ESTOP;
         ret = false;
     }
 
@@ -121,6 +155,7 @@ bool AP_Arming_Plane::ins_checks(bool display_failure)
             const char *reason = AP::ahrs().prearm_failure_reason();
             if (reason == nullptr) {
                 reason = "AHRS not healthy";
+                arming_check_detail_common += AHRS_NOT_HEALTHY;
             }
             check_failed(ARMING_CHECK_INS, display_failure, "%s", reason);
             return false;

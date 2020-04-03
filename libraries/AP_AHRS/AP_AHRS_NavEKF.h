@@ -85,6 +85,9 @@ public:
     // if we have an estimate
     bool airspeed_estimate(float *airspeed_ret) const override;
 
+    int get_failed_airspeed_sensors() const;
+    //
+
     // true if compass is being used
     bool use_compass() override;
 

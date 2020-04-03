@@ -493,6 +493,10 @@ bool AP_AHRS_NavEKF::airspeed_estimate(float *airspeed_ret) const
     return AP_AHRS_DCM::airspeed_estimate(airspeed_ret);
 }
 
+int AP_AHRS_NavEKF::get_failed_airspeed_sensors() const{
+    return AP_AHRS_DCM::get_failed_airspeed_sensors();
+}
+
 // true if compass is being used
 bool AP_AHRS_NavEKF::use_compass(void)
 {

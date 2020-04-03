@@ -1039,6 +1039,11 @@ bool AP_AHRS_DCM::get_position(struct Location &loc) const
 }
 
 // return an airspeed estimate if available
+int AP_AHRS_DCM::get_failed_airspeed_sensors() const{
+    return _airspeed->get_failed_sensors();
+
+}
+
 bool AP_AHRS_DCM::airspeed_estimate(float *airspeed_ret) const
 {
     bool ret = false;
