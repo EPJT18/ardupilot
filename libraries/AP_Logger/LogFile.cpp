@@ -649,6 +649,7 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     float temp;
     bool has_temp = battery.get_temperature(temp, battery_instance);
     bool healthy = battery.healthy();
+    uint8_t capacity_remaining_percent;
     float current, consumed_mah, consumed_wh, consumed_wh_lookup, consumed_mah_lookup, remaining_wh;
     if (!battery.current_amps(current, battery_instance)) {
         current = quiet_nanf();
@@ -668,11 +669,14 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     if (!battery.remaining_wh(remaining_wh, battery_instance)) {
         remaining_wh = quiet_nanf();
     }
+    capacity_remaining_percent = battery.capacity_remaining_pct();
+
 
     const struct log_Current pkt = {
         LOG_PACKET_HEADER_INIT(type),
         time_us             : time_us,
         healthy             : healthy,
+        capacity_remaining  : capacity_remaining_percent,
         voltage             : battery.voltage(battery_instance),
         voltage_resting     : battery.voltage_resting_estimate(battery_instance),
         current_amps        : current,

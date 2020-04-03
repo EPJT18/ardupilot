@@ -97,9 +97,6 @@ public:
     /// consumed_wh_lookup - returns total energy drawn estimate (from lookup table) in watt.hours
     bool consumed_wh_lookup(float&wh, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
 
-    // value between 0 and 100% capacity remaining from voltage lookup method
-    uint8_t capacity_remaining_pct_from_voltage();
-
     void init(void) override;
     void read() override;
 
@@ -117,6 +114,8 @@ public:
 
     // returns true if battery monitor provides individual cell voltages
     bool has_wh_remaining() const override { return true; }
+
+    uint8_t capacity_remaining_pct() override;
 
 private:
 

@@ -99,6 +99,19 @@ bool AP_BattMonitor_Swoop::check_health(void){
     return false;
 }
 
+uint8_t AP_BattMonitor_Swoop::capacity_remaining_pct(){
+    if (!lookup_valid()){
+        return AP_BattMonitor_Analog::capacity_remaining_pct();
+    }
+    float wh_consumed;
+    if(_state.healthy){
+        wh_consumed = _state.consumed_wh_lookup;
+    }else{
+        wh_consumed = _state.consumed_wh + _initial_cell_state.wh_used * _params._series.get() * _params._parallel.get();
+    }
+    return MIN(MAX(100 * 1-(wh_consumed/_dead_cell_state.wh_used), 0), UINT8_MAX);
+}
+
 bool AP_BattMonitor_Swoop::lookup_valid(void){
     uint32_t now_ms = AP_HAL::millis();
 
