@@ -319,6 +319,22 @@ void Plane::send_swoop_status(mavlink_channel_t chan){
     mavlink_msg_swoop_status_send(chan, quadplane.swoop_flight_status(), mission.get_current_nav_cmd().id, mission.get_next_nav_cmd_id() );
 }
 
+void Plane::send_swoop_energy(mavlink_channel_t chan){
+    mavlink_msg_swoop_energy_send(
+        chan,
+        quadplane.swoop_forward_endurance(),
+        quadplane.swoop_forward_health(),
+        quadplane.swoop_forward_proportion(),
+        quadplane.swoop_hover_endurance(),
+        quadplane.swoop_hover_health(),
+        quadplane.swoop_hover_proportion(),
+        0,
+        0,
+        0,
+        0
+         );
+}
+
 
 void Plane::send_swoop_flags(mavlink_channel_t chan) 
 {
@@ -527,7 +543,7 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         break;
 
     case MSG_SWOOP_ENERGY:
-        //plane.send_swoop_energy(chan);
+        plane.send_swoop_energy(chan);
         break;
 
     

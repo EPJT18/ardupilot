@@ -105,6 +105,9 @@ public:
     float voltage(uint8_t instance) const;
     float voltage() const { return voltage(AP_BATT_PRIMARY_INSTANCE); }
 
+    float power(uint8_t instance) const;
+    float wh_remaining(uint8_t instance) const;
+
     /// get voltage with sag removed (based on battery current draw and resistance)
     /// this will always be greater than or equal to the raw voltage
     float voltage_resting_estimate(uint8_t instance) const;

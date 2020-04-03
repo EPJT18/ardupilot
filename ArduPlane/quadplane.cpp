@@ -537,6 +537,13 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("ARSP_TOL_NOTE", 45, QuadPlane, airspeed_tollerance_note, 4.0f),
     AP_GROUPINFO("ARSP_TOL_NOTE", 46, QuadPlane, airspeed_tollerance_advice, 8.0f),
 
+    AP_GROUPINFO("FWD_POW_SEED_W", 47, QuadPlane, forward_power_seed, 650.0f),
+    AP_GROUPINFO("FWD_POS_TAU", 48, QuadPlane, forward_power_tau, 300.0f),
+
+    AP_GROUPINFO("H_POW_SEED_W", 49, QuadPlane, hover_power_seed, 2700.0f),
+    AP_GROUPINFO("H_POS_TAU", 50, QuadPlane, hover_power_tau, 5.0f),
+
+
 
 
 
@@ -1566,7 +1573,61 @@ bool QuadPlane::assistance_needed()
     return false;
 }
 
+uint16_t QuadPlane::swoop_forward_endurance(){
+    
+    if (average_forward_power < forward_power_seed/2){
+        average_forward_power = forward_power_seed;
+    }
+    if(forward_power_tau <1.0f){
+        forward_power_tau = 1.0f;
+    }
+    const uint32_t now = millis();
+    uint32_t deltaT = now - last_forward_power_sample_time;
+    last_forward_power_sample_time = now;
+    if(deltaT> 2000){
+        deltaT = 2000;
+    }
+    if(plane.airspeed.get_airspeed()> assist_speed ){
+        average_forward_power = (average_forward_power*((1000*forward_power_tau) - deltaT)/(1000*forward_power_tau)) + (plane.battery.power(0)*deltaT/(1000*forward_power_tau));
+    }
+    return (uint16_t)((plane.battery.wh_remaining(0)/average_forward_power)*3600.0f);
+}
 
+uint16_t QuadPlane::swoop_hover_endurance(){
+    
+    if (average_hover_power < hover_power_seed/2){
+        average_hover_power = hover_power_seed;
+    }
+    if(hover_power_tau < 1.0f){
+        hover_power_tau = 1.0f;
+    }
+    const uint32_t now = millis();
+    uint32_t deltaT = now - last_hover_power_sample_time;
+    last_hover_power_sample_time = now;
+    if(deltaT> 2000){
+        deltaT = 2000;
+    }
+    if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED && plane.airspeed.get_airspeed()< assist_speed/2 ){
+        average_hover_power = (average_hover_power*((1000*hover_power_tau) - deltaT)/(1000*hover_power_tau)) + (plane.battery.power(1)*deltaT/(1000*hover_power_tau));
+    }
+    return (uint16_t)((plane.battery.wh_remaining(1)/average_hover_power)*3600.0f);
+}
+
+uint8_t QuadPlane::swoop_forward_health() const{
+    return plane.battery.healthy(0);
+}
+
+uint8_t QuadPlane::swoop_hover_health() const{
+    return plane.battery.healthy(1);
+}
+
+uint8_t QuadPlane::swoop_forward_proportion() const{
+    return plane.battery.capacity_remaining_pct(0);
+}
+
+uint8_t QuadPlane::swoop_hover_proportion() const{
+    return plane.battery.capacity_remaining_pct(1);
+}
 
 uint8_t QuadPlane::swoop_flight_status() const{
     
@@ -1967,6 +2028,7 @@ void QuadPlane::update_transition(void)
     if (!hal.util->get_soft_armed()) {
         // reset the failure timer if we haven't started transitioning
         transition_start_ms = now;
+
     } 
     // Check the status of transition
     else if ((transition_state != TRANSITION_DONE) && (transition_start_ms != 0)){

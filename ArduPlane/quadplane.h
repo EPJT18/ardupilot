@@ -73,6 +73,14 @@ public:
 
     uint16_t swoop_flags() const;
     uint8_t swoop_flight_status() const;
+
+    uint16_t swoop_forward_endurance();
+    uint8_t swoop_forward_health() const;
+    uint8_t swoop_forward_proportion() const;
+    uint16_t swoop_hover_endurance();
+    uint8_t swoop_hover_health() const;
+    uint8_t swoop_hover_proportion() const;
+    
     
     uint16_t get_forward_endurance() const;
     uint8_t get_forward_health() const;
@@ -200,6 +208,8 @@ private:
 
     // vertical acceleration the pilot may request
     AP_Int16 pilot_accel_z;
+
+
 
     // check for quadplane assistance needed
     bool assistance_needed();
@@ -336,6 +346,18 @@ private:
     AP_Float land_final_alt;
     AP_Float vel_forward_alt_cutoff;
     
+
+    AP_Float average_forward_power;
+    AP_Float average_hover_power;
+    AP_Float forward_power_seed;
+    AP_Float hover_power_seed;
+    AP_Float forward_power_tau;
+    AP_Float hover_power_tau;
+    AP_Int32 last_forward_power_sample_time;
+    AP_Int32 last_hover_power_sample_time;
+
+    
+
     AP_Int8 enable;
     AP_Int8 transition_pitch_max;
     AP_Int16 max_descend_trig_vel;
