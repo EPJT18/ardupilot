@@ -104,7 +104,7 @@ uint8_t AP_BattMonitor_Swoop::capacity_remaining_pct(){
         return AP_BattMonitor_Analog::capacity_remaining_pct();
     }
     float wh_consumed;
-    if(_state.healthy){
+    if(!_state.healthy){
         wh_consumed = _state.consumed_wh_lookup;
     }else{
         wh_consumed = _state.consumed_wh + _initial_cell_state.wh_used * _params._series.get() * _params._parallel.get();
