@@ -345,7 +345,6 @@ void Plane::send_swoop_energy(mavlink_channel_t chan){
 void Plane::send_swoop_flags(mavlink_channel_t chan) 
 {
 
-    if (hal.util->get_soft_armed()) {
         mavlink_msg_swoop_inflight_flags_instant_send(
             chan,
             quadplane.swoop_flags(),
@@ -384,7 +383,7 @@ void Plane::send_swoop_flags(mavlink_channel_t chan)
             quadplane.swoop_flag_detail(SERVO)    
 
         );
-    }
+    
 }
 
 
