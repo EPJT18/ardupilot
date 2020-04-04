@@ -316,7 +316,13 @@ void Plane::send_wind(mavlink_channel_t chan)
 
 void Plane::send_swoop_status(mavlink_channel_t chan){
    
-    mavlink_msg_swoop_status_send(chan, quadplane.swoop_flight_status(), mission.get_current_nav_cmd().id, mission.get_next_nav_cmd_id() );
+    mavlink_msg_swoop_status_send(
+        chan, 
+        quadplane.swoop_flight_status(), 
+        mission.get_current_nav_cmd().id, 
+        mission.get_next_nav_cmd_id(),
+        mission.get_first_jump_times_run()
+         );
 }
 
 void Plane::send_swoop_energy(mavlink_channel_t chan){

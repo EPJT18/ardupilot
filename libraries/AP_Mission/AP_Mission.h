@@ -480,6 +480,8 @@ public:
         return _rsem;
     }
 
+    uint16_t get_first_jump_times_run(){return _jump_tracking[0].num_times_run;};
+
     // returns true if the mission contains the requested items
     bool contains_item(MAV_CMD command) const;
 
