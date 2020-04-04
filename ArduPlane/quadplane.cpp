@@ -1764,12 +1764,22 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
     }
 
     case HOVER_BATTERY:{
-        ////to_implement
+        if(!plane.battery.healthy(1)){
+            return CAUTION;
+        }
+        if(plane.battery.capacity_remaining_pct(1)<10){
+            return CAUTION;
+        }
         return NO_FLAG;
     }
 
     case FORWARD_BATTERY:{
-        ////to_implement
+        if(!plane.battery.healthy(0)){
+            return CAUTION;
+        }
+        if(plane.battery.capacity_remaining_pct(0)<10){
+            return CAUTION;
+        }
         return NO_FLAG;
     }
 
@@ -1876,7 +1886,7 @@ uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
     }
     case GPS_HEALTH:
         if(swoop_flag_level(GPS_HEALTH)>0){
-            return  ((uint)GPS1_GOOD << plane.gps.swoop_health_status(0) )+ ((uint)GPS2_GOOD<<plane.gps.swoop_health_status(1));
+            return  ((uint8_t)GPS1_GOOD << plane.gps.swoop_health_status(0) )+ ((uint8_t)GPS2_GOOD<<plane.gps.swoop_health_status(1));
         }
         
         return NO_DETAILS_AVAILIABLE;
@@ -1917,13 +1927,25 @@ uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
     }
 
     case HOVER_BATTERY:{
-        ////to_implement
-        return NO_DETAILS_AVAILIABLE;
+        int returnValue = NO_DETAILS_AVAILIABLE; 
+        if(!plane.battery.healthy(1)){
+            returnValue += HOVER_BATTERY_FAILURE_DETECTED;
+        }
+        if(plane.battery.capacity_remaining_pct(1)<10){
+            returnValue += HOVER_ENDURANCE;
+        }
+        return returnValue;
     }
 
     case FORWARD_BATTERY:{
-        ////to_implement
-        return NO_DETAILS_AVAILIABLE;
+        int returnValue = NO_DETAILS_AVAILIABLE; 
+        if(!plane.battery.healthy(0)){
+            returnValue += FORWARD_BATTERY_FAILURE_DETECTED;
+        }
+        if(plane.battery.capacity_remaining_pct(0)<10){
+            returnValue += FORWARD_ENDURANCE;
+        }
+        return returnValue;
     }
 
     case ALTITUDE:{
@@ -1976,7 +1998,7 @@ uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
                 returnValue += AIRSPEED_HIGH;
             }
         }
-        returnValue += (uint)ahrs.get_failed_airspeed_sensors()<<2;
+        returnValue += (uint8_t)ahrs.get_failed_airspeed_sensors()<<2;
           
         return returnValue;
     }
@@ -3421,7 +3443,7 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
         }
         else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
            
-            forward_motor_count++    
+            forward_motor_count++;    
             if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
                
                 if (now-time_since_last_forward_blh_warning>4000){

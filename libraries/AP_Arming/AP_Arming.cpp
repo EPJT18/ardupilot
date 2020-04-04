@@ -729,7 +729,7 @@ bool AP_Arming::servo_checks(bool report)
 #if HAL_WITH_IO_MCU
     if (!iomcu.healthy()) {
         check_failed(report, "IOMCU is unhealthy");
-        if (!arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR){
+        if (!(arming_check_detail_1 & AUTOPILOT_INTERNAL_SYSTEM_ERROR)){
             arming_check_detail_1 += AUTOPILOT_INTERNAL_SYSTEM_ERROR;
         }
         check_passed = false;
