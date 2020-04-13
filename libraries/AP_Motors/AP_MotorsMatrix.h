@@ -44,6 +44,8 @@ public:
     // output_to_motors - sends minimum values out to the motors
     void                output_to_motors() override;
 
+    void                update_failure_detection() override;          
+
     // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
     uint16_t            get_motor_mask() override;

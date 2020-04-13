@@ -109,6 +109,43 @@ void AP_MotorsMatrix::output_to_motors()
             rc_write(i, output_to_pwm(_actuator[i]));
         }
     }
+
+     // update failure detection
+    update_failure_detection();
+}
+
+
+void AP_MotorsMatrix::update_failure_detection(){
+
+    const uint32_t now = AP_HAL::millis();
+    if(now- _last_motor_check_time > 1000){
+        _last_motor_check_time = now - 1000;
+    }
+    uint32_t delta_t =now -  _last_motor_check_time;
+    _last_motor_check_time = now;
+    float motorAverage =0.0f;
+    int enabled_count = 0;
+    
+    float tc = _motor_check_time_constant*1000.0f;
+    if(tc < 1000){
+        tc = 1000.0f;
+    }
+
+    for (int i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
+                if (motor_enabled[i]) {
+                    if(_actuator[i]>_spin_max*0.98){
+                        _full_throttle_portion_filter[i] = (delta_t/tc) + (_full_throttle_portion_filter[i] *((tc- delta_t)/tc));
+                    }
+                    else{
+                        _full_throttle_portion_filter[i] = (_full_throttle_portion_filter[i] *((tc- delta_t)/tc));
+                    }
+                    _throttle_average_filter[i] = (_actuator[i]*(delta_t/tc)) + (_throttle_average_filter[i] *((tc- delta_t)/tc));
+                    motorAverage += _actuator[i];
+                    enabled_count++;
+                }
+    }
+    _throttle_net_average_filter = ((motorAverage/enabled_count)*(delta_t/tc)) + (_throttle_net_average_filter *((tc- delta_t)/tc));
+
 }
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)

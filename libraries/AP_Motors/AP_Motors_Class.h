@@ -186,6 +186,11 @@ public:
     // This function is overriden in motors_heli class.   Always true for multicopters.
     virtual bool init_targets_on_arming() const { return true; }
 
+
+    virtual bool check_motor_saturation() const = 0;
+
+    virtual bool check_motor_high_offset() const = 0;
+
     enum pwm_type { PWM_TYPE_NORMAL     = 0,
                     PWM_TYPE_ONESHOT    = 1,
                     PWM_TYPE_ONESHOT125 = 2,

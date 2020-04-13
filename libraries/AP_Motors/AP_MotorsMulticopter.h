@@ -68,6 +68,10 @@ public:
     // returns maximum thrust in the range 0 to 1
     float               get_throttle_thrust_max() const { return _throttle_thrust_max; }
 
+    bool check_motor_saturation() const override;
+
+    bool check_motor_high_offset() const override;
+
     // return true if spool up is complete
     bool spool_up_complete() const { return _spool_state == SpoolState::THROTTLE_UNLIMITED; }
 
@@ -92,6 +96,8 @@ public:
     
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo        var_info[];
+
+    virtual void        update_failure_detection() = 0;
 
 protected:
 
@@ -121,6 +127,8 @@ protected:
 
     // converts desired thrust to linearized actuator output in a range of 0~1
     float               thrust_to_actuator(float thrust_in);
+
+    void                update_falure_detection();
 
     // adds slew rate limiting to actuator output if MOT_SLEW_TIME > 0 and not shutdown
     void                set_actuator_with_slew(float& actuator_output, float input);
@@ -163,6 +171,8 @@ protected:
     AP_Float            _throttle_hover;        // estimated throttle required to hover throttle in the range 0 ~ 1
     AP_Int8             _throttle_hover_learn;  // enable/disabled hover thrust learning
     AP_Int8             _disarm_disable_pwm;    // disable PWM output while disarmed
+    AP_Float            _motor_check_time_constant;
+    AP_Float            _mismatch_warn;
 
     // Maximum lean angle of yaw servo in degrees. This is specific to tricopter
     AP_Float            _yaw_servo_angle_max_deg;
@@ -188,6 +198,12 @@ protected:
     float               _throttle_limit;        // ratio of throttle limit between hover and maximum
     float               _throttle_thrust_max;   // the maximum allowed throttle thrust 0.0 to 1.0 in the range throttle_min to throttle_max
     float               _disarm_safe_timer;     // Timer for the esc when transitioning between zero pwm to minimum
+    AP_Int32            _last_motor_check_time; 
+    float               _full_throttle_portion_filter[AP_MOTORS_MAX_NUM_MOTORS];
+    float               _throttle_average_filter[AP_MOTORS_MAX_NUM_MOTORS];
+    float               _throttle_net_average_filter;
+    
+
 
     // vehicle supplied callback for thrust compensation. Used for tiltrotors and tiltwings
     thrust_compensation_fn_t _thrust_compensation_callback;

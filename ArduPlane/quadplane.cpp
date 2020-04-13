@@ -543,7 +543,9 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("H_POW_SEED_W", 49, QuadPlane, hover_power_seed, 2700.0f),
     AP_GROUPINFO("H_POS_TAU", 50, QuadPlane, hover_power_tau, 5.0f),
 
-
+    AP_GROUPINFO("ABORT_TIMEOUT", 51, QuadPlane, qrtl_timeout, 90.0f),
+    AP_GROUPINFO("FWD_BATT_FULL", 52, QuadPlane, forward_battery_start_percentage , 98.0f),
+    AP_GROUPINFO("HVR_BATT_FULL", 53, QuadPlane, hover_battery_start_percentage, 98.0f),
 
 
 
@@ -717,7 +719,7 @@ bool QuadPlane::setup(void)
 
     if (tailsitter.motor_mask == 0) {
         // this is a normal quadplane
-        switch (motor_class) {
+        /*switch (motor_class) {
         case AP_Motors::MOTOR_FRAME_TRI:
             motors = new AP_MotorsTri(plane.scheduler.get_loop_rate_hz(), rc_speed);
             motors_var_info = AP_MotorsTri::var_info;
@@ -730,11 +732,12 @@ bool QuadPlane::setup(void)
                 rotation = ROTATION_PITCH_90;
             }
             break;
-        default:
-            motors = new AP_MotorsMatrix(plane.scheduler.get_loop_rate_hz(), rc_speed);
-            motors_var_info = AP_MotorsMatrix::var_info;
-            break;
-        }
+        
+        default:*/
+        motors = new AP_MotorsMatrix(plane.scheduler.get_loop_rate_hz(), rc_speed);
+        motors_var_info = AP_MotorsMatrix::var_info;
+            //break;
+       //}
     } else {
         // this is a copter tailsitter with motor layout specified by frame_class and frame_type
         // tilting motors are not supported (tiltrotor control variables are ignored)
@@ -957,15 +960,6 @@ void QuadPlane::control_stabilize(void)
     hold_stabilize(pilot_throttle_scaled);
     //if idling on the pad and one of the motors hasnt started...
 
-    if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE && hover_motor_failed){
-        gcs().send_text(MAV_SEVERITY_ERROR, "Hover motor failed - Abort takeoff");
-        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
-            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
-        }
-        else{
-            plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
-        }     
-    }
 
 }
 
@@ -1733,7 +1727,7 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
 
     case HOVER_MOTORS:{
         if(hover_motor_failed){
-            return ADVICE;
+            return WARNING;
         }
         return NO_FLAG;   
     }
@@ -2297,8 +2291,50 @@ void QuadPlane::update(void)
         return;
     }
 
-    check_hover_motors_spinning();
+    
+    check_hover_motors_health();
     check_forward_motors_spinning();
+
+    int swoop_status = swoop_flight_status();
+
+    const uint32_t now = AP_HAL::millis();
+
+    float aspeed;
+    bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
+
+    bool low_speed_transiiton = (swoop_status == TRANSITION_TO_FORWARD_FLIGHT) && (!have_airspeed || aspeed< assist_speed *0.6);
+
+
+    if((swoop_status == TAKEOFF || swoop_status ==MOTORS_IDLING ||swoop_status == SEARCHING_FOR_TARGET|| low_speed_transiiton) && hover_motor_failed){
+        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+            gcs().send_text(MAV_SEVERITY_ERROR, "Hover motor failed - Landing!");
+            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
+        }
+        else{
+            gcs().send_text(MAV_SEVERITY_ERROR, "Hover motor failed - Abort takeoff");
+            plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+            
+        }  
+    }
+
+    if (swoop_status == TRANSITION_TO_HOVER && hover_motor_failed && (enable_loiter_on_motor_failure >0) ){
+        plane.set_mode(plane.mode_loiter, ModeReason::VTOL_FAILED_TRANSITION);
+    }
+
+    if(swoop_status == ABORTING_TAKEOFF){
+        if(!abort_timer_started){
+            landing_abort_started = now;
+            abort_timer_started = true;
+        }
+        if(now-landing_abort_started> qrtl_timeout*1000.0f){
+            gcs().send_text(MAV_SEVERITY_ERROR, "Abort Timeout - Landing!");
+            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
+        }
+    }
+    else{
+        abort_timer_started = false;
+    }
+
 
     if ((ahrs_view != NULL) && !is_equal(_last_ahrs_trim_pitch, ahrs_trim_pitch.get())) {
         _last_ahrs_trim_pitch = ahrs_trim_pitch.get();
@@ -2339,7 +2375,6 @@ void QuadPlane::update(void)
     if (!in_vtol_mode()) {
         update_transition();
     } else {
-        const uint32_t now = AP_HAL::millis();
 
         assisted_flight = false;
         
@@ -3467,19 +3502,45 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
   
 }
 
-void QuadPlane::check_hover_motors_spinning(void){
+void QuadPlane::check_hover_motors_health(void){
 
 if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN || !plane.arming.is_armed()){    
     first_hover_motor_check_time =0;
     hover_motor_failed = false;
     return;
 }
+uint32_t now = AP_HAL::millis();
 hover_motor_detail =0;
 hover_motor_failed = false;
 
+motors->update_failure_detection();
+
+if(motors->check_motor_saturation()){
+
+    
+    if (now-time_since_last_blh_warning>4000){
+        gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor Saturation!");
+        time_since_last_blh_warning = now;
+    }
+    
+    hover_motor_detail += HOVER_MOTOR_OFFSETS;
+    hover_motor_failed = true;
+}
+
+if(motors->check_motor_high_offset()){
+
+    if (now-time_since_last_blh_warning>4000){
+        gcs().send_text(MAV_SEVERITY_ERROR, "Hover Motor High Offset!");
+        time_since_last_blh_warning = now;
+    }
+    
+    hover_motor_detail += HOVER_MOTOR_OFFSETS;
+    hover_motor_failed = true;
+}
+
 #ifdef HAVE_AP_BLHELI_SUPPORT
    
-    uint32_t now = AP_HAL::millis();
+    
     if(now-last_hover_motor_check_time>2000){
         first_hover_motor_check_time = now;     
     }

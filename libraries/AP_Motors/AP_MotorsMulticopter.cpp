@@ -212,6 +212,9 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SAFE_TIME", 42, AP_MotorsMulticopter, _safe_time, AP_MOTORS_SAFE_TIME_DEFAULT),
 
+    AP_GROUPINFO("FAIL_TIME", 43, AP_MotorsMulticopter, _motor_check_time_constant, 5.0f),
+
+    AP_GROUPINFO("WARN_THRESH", 44, AP_MotorsMulticopter, _mismatch_warn, 0.25f),
     AP_GROUPEND
 };
 
@@ -272,6 +275,30 @@ void AP_MotorsMulticopter::output_min()
     set_desired_spool_state(DesiredSpoolState::SHUT_DOWN);
     _spool_state = SpoolState::SHUT_DOWN;
     output();
+}
+
+bool AP_MotorsMulticopter::check_motor_saturation() const
+{
+    for (int i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
+        if(motor_enabled[i]){
+            if (_full_throttle_portion_filter[i]>0.5){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool AP_MotorsMulticopter::check_motor_high_offset() const
+{
+    for (int i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
+        if(motor_enabled[i]){
+            if (abs(_throttle_average_filter[i] - _throttle_net_average_filter)>_mismatch_warn){
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // update the throttle input filter

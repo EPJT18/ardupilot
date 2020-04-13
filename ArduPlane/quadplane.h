@@ -116,7 +116,7 @@ public:
     bool do_vtol_land(const AP_Mission::Mission_Command& cmd);
     bool verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd);
     bool verify_vtol_land(void);
-    void check_hover_motors_spinning(void);
+    void check_hover_motors_health(void);
     void check_forward_motors_spinning(void);
     bool in_vtol_auto(void) const;
     bool in_vtol_mode(void) const;
@@ -355,6 +355,8 @@ private:
     AP_Float hover_power_tau;
     AP_Int32 last_forward_power_sample_time;
     AP_Int32 last_hover_power_sample_time;
+    AP_Float forward_battery_start_percentage;
+    AP_Float hover_battery_start_percentage;
 
     
 
@@ -453,12 +455,16 @@ private:
     AP_Float esc_temp_caution;
     AP_Float airspeed_tollerance_note;
     AP_Float airspeed_tollerance_advice;
+    AP_Float qrtl_timeout;
 
     // pitch when we enter loiter mode
     int32_t loiter_initial_pitch_cd;
 
     // when did we last run the attitude controller?
     uint32_t last_att_control_ms;
+
+    uint32_t landing_abort_started;
+    bool abort_timer_started;
 
     // true if we have reached the airspeed threshold for transition
     enum {
