@@ -797,6 +797,7 @@ private:
     void send_swoop_arming_flags(mavlink_channel_t chan);
     void send_swoop_status(mavlink_channel_t chan);
     void send_swoop_energy(mavlink_channel_t chan);
+    void send_swoop_airspeed(mavlink_channel_t chan);
 
     void send_servo_out(mavlink_channel_t chan);
     void send_wind(mavlink_channel_t chan);

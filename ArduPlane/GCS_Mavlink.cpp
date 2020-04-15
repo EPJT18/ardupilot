@@ -380,7 +380,8 @@ void Plane::send_swoop_flags(mavlink_channel_t chan)
             quadplane.swoop_flag_detail(LANDING),
             quadplane.swoop_flag_detail(AERODYNAMIC),
             quadplane.swoop_flag_detail(AIRSPEED),
-            quadplane.swoop_flag_detail(SERVO)    
+            quadplane.swoop_flag_detail(SERVO),
+            quadplane.swoop_target_failed()  
 
         );
     
@@ -401,6 +402,15 @@ void Plane::send_swoop_arming_flags(mavlink_channel_t chan){
 
 
     }
+}
+
+void Plane::send_swoop_airspeed(mavlink_channel_t chan){
+    mavlink_msg_swoop_airspeed_send(
+        chan,
+        airspeed.get_airspeed()*ahrs.get_EAS2TAS()*100,
+        target_airspeed_cm*ahrs.get_EAS2TAS(),
+        ahrs.get_EAS2TAS()*100
+    );
 }
 
 
@@ -549,6 +559,10 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 
     case MSG_SWOOP_ENERGY:
         plane.send_swoop_energy(chan);
+        break;
+
+    case MSG_SWOOP_AIRSPEED:
+        plane.send_swoop_airspeed(chan);
         break;
 
     
@@ -740,7 +754,8 @@ static const ap_message STREAM_SWOOP_msgs[] = {
     MSG_SWOOP_FLAGS,
     MSG_SWOOP_ARMING_FLAGS,
     MSG_SWOOP_STATUS,
-    MSG_SWOOP_ENERGY
+    MSG_SWOOP_ENERGY,
+    MSG_SWOOP_AIRSPEED
 };
 
 const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {

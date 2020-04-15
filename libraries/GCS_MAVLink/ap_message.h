@@ -77,5 +77,6 @@ enum ap_message : uint8_t {
     MSG_SWOOP_ARMING_FLAGS,
     MSG_SWOOP_STATUS,
     MSG_SWOOP_ENERGY,
+    MSG_SWOOP_AIRSPEED,
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };

@@ -546,7 +546,9 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("ABORT_TIMEOUT", 51, QuadPlane, qrtl_timeout, 90.0f),
     AP_GROUPINFO("FWD_BATT_FULL", 52, QuadPlane, forward_battery_start_percentage , 98.0f),
     AP_GROUPINFO("HVR_BATT_FULL", 53, QuadPlane, hover_battery_start_percentage, 98.0f),
-
+    AP_GROUPINFO("LANGUAGE", 54, QuadPlane, language ,0),
+    AP_GROUPINFO("PODID", 55, QuadPlane, PODID,0),
+    AP_GROUPINFO("ROUTEID", 56, QuadPlane, ROUTEID , 0),
 
 
 
@@ -646,7 +648,7 @@ bool QuadPlane::setup(void)
 
     enum AP_Motors::motor_frame_class motor_class;
     enum Rotation rotation = ROTATION_NONE;
-
+    pland_fail_type = 0;
     /*
       cope with upgrade from old AP_Motors values for frame_class
      */
@@ -1861,7 +1863,9 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
     return NO_FLAG;
     
 }
-
+uint8_t QuadPlane::swoop_target_failed() const{
+    return pland_fail_type;
+}
 
 uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
     switch (flag_type)
@@ -2370,6 +2374,7 @@ void QuadPlane::update(void)
             attitude_control->relax_attitude_controllers();
         }
         pos_control->relax_alt_hold_controllers(0);
+        pland_fail_type = 0;
     }
     
     if (!in_vtol_mode()) {
@@ -3662,16 +3667,18 @@ bool QuadPlane::verify_vtol_land(void)
                 case ABORT_CONTINUE_NEXT_WP:
                     // abort
                     gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to next WP.");
+                    pland_fail_type =1;
                     return true;
                 case PROCEED_GPS_LAND:
                     // proceed, disable precision landing
                     gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceed with GPS land.");
                     poscontrol.state = QPOS_LAND_DESCEND2;
-                    
+                    pland_fail_type = 2;
                     break;
                 case ABORT_CONTINUE_CNTGCY_WP:
                     // abort
                     gcs().send_text(MAV_SEVERITY_INFO, "Precland target not found. Proceeding to contingency WP.");
+                    pland_fail_type = 3;
                     return true;
             }
         }

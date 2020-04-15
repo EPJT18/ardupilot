@@ -90,6 +90,7 @@ public:
     uint8_t swoop_flag_level(int flag_type) const;
     uint8_t swoop_max_flag_level() const;
     uint8_t swoop_flag_detail(int flag_type) const;
+    uint8_t swoop_target_failed() const;
     
 
 
@@ -333,6 +334,8 @@ private:
     bool in_att_assist;
     bool in_speed_assist;
 
+    uint8_t pland_fail_type;
+
     // maximum yaw rate in degrees/second
     AP_Float yaw_rate_max;
 
@@ -357,6 +360,9 @@ private:
     AP_Int32 last_hover_power_sample_time;
     AP_Float forward_battery_start_percentage;
     AP_Float hover_battery_start_percentage;
+    AP_Int8 language;
+    AP_Int8 PODID;
+    AP_Int8 ROUTEID;
 
     
 
