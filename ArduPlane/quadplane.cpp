@@ -535,7 +535,7 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("H_POW_CAUTION", 43, QuadPlane, hover_power_caution, 5000.0f),
     AP_GROUPINFO("ESC_T_CAUTION", 44, QuadPlane, esc_temp_caution, 85.0f),
     AP_GROUPINFO("ARSP_TOL_NOTE", 45, QuadPlane, airspeed_tollerance_note, 4.0f),
-    AP_GROUPINFO("ARSP_TOL_NOTE", 46, QuadPlane, airspeed_tollerance_advice, 8.0f),
+    AP_GROUPINFO("ARSP_TOL_ADVICE", 46, QuadPlane, airspeed_tollerance_advice, 8.0f),
 
     AP_GROUPINFO("FWD_POW_SEED_W", 47, QuadPlane, forward_power_seed, 650.0f),
     AP_GROUPINFO("FWD_POS_TAU", 48, QuadPlane, forward_power_tau, 300.0f),
