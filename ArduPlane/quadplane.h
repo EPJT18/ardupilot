@@ -360,9 +360,9 @@ private:
     AP_Int32 last_hover_power_sample_time;
     AP_Float forward_battery_start_percentage;
     AP_Float hover_battery_start_percentage;
-    AP_Int8 language;
-    AP_Int8 PODID;
-    AP_Int8 ROUTEID;
+    AP_Int32 language;
+    AP_Int32 PODID;
+    AP_Int32 ROUTEID;
 
     
 
