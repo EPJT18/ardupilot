@@ -1826,7 +1826,7 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
             for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
               
                 AP_BLHeli::telem_data td;
-                if(!blheli->get_telem_data(i, td) && td.temperature> esc_temp_caution ){
+                if(blheli->get_telem_data(i, td) && td.temperature> esc_temp_caution ){
                     return CAUTION;
                 }   
             }
