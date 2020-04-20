@@ -652,7 +652,7 @@ bool AP_Arming::mission_checks(bool report)
                     check_failed(ARMING_CHECK_MISSION, report, "Missing mission item: %s", misChecks[i].type);
                     
                     if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
-                        arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+                        arming_check_detail_2 += MISSION_MISSING_ELEMENTS;
                     }
                     return false;
                 }
@@ -663,7 +663,7 @@ bool AP_Arming::mission_checks(bool report)
             if (!AP::ahrs().get_position(ahrs_loc)) {
                 check_failed(ARMING_CHECK_MISSION, report, "Can't check rally without position");
                 if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
-                    arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+                    arming_check_detail_2 += MISSION_MISSING_ELEMENTS;
                 }
                 return false;
             }
@@ -671,7 +671,7 @@ bool AP_Arming::mission_checks(bool report)
             if (!rally->find_nearest_rally_point(ahrs_loc, rally_loc)) {
                 check_failed(ARMING_CHECK_MISSION, report, "No sufficently close rally point located");
                 if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
-                    arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+                    arming_check_detail_2 += MISSION_MISSING_ELEMENTS;
                 }
                 return false;
             }
@@ -907,7 +907,7 @@ bool AP_Arming::fence_checks(bool display_failure)
         check_failed(display_failure, "%s", fail_msg);
     }
     if (!(arming_check_detail_2 & MISSION_MISSING_ELEMENTS)){
-        arming_check_detail_1 += MISSION_MISSING_ELEMENTS;
+        arming_check_detail_2 += MISSION_MISSING_ELEMENTS;
     }
 
     return false;

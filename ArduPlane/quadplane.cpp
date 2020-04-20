@@ -1743,10 +1743,10 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
 
     case LIDAR: {
         int returnValue = NO_FLAG;
-        if((plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::RangeFinder_Good)){
+        if((plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::RangeFinder_NotConnected)){
             return ADVICE;
         }
-        if(plane.rangefinder_state.in_range && plane.rangefinder_state.in_use && !in_vtol_mode()){
+        else if(plane.rangefinder_state.in_range && plane.rangefinder_state.in_use && !in_vtol_mode()){
             float distance = plane.rangefinder_state.height_estimate;
             
             if (distance < lidar_note){
@@ -1841,11 +1841,12 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
         float aspeed;
         bool have_airspeed = ahrs.airspeed_estimate(&aspeed);
         if(!in_vtol_mode() && !transition_from_stationary && have_airspeed){
-            if(abs((plane.target_airspeed_cm/100.0f)- aspeed)>airspeed_tollerance_advice){
-                returnValue = ADVICE;
-            }
+            
             if(abs((plane.target_airspeed_cm/100.0f) - aspeed)>airspeed_tollerance_note){
                 returnValue = NOTE;
+            }
+            if(abs((plane.target_airspeed_cm/100.0f)- aspeed)>airspeed_tollerance_advice){
+                returnValue = ADVICE;
             }
         }
         if (ahrs.get_failed_airspeed_sensors()>0){
@@ -1910,10 +1911,10 @@ uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
 
     case LIDAR: {
         int returnValue = NO_DETAILS_AVAILIABLE; 
-        if((plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::RangeFinder_Good)){
+        if((plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::RangeFinder_NotConnected)){
             returnValue += LIDAR_FAILURE;
         }
-        if(plane.rangefinder_state.in_range && plane.rangefinder_state.in_use && !in_vtol_mode()){
+         else if(plane.rangefinder_state.in_range && plane.rangefinder_state.in_use && !in_vtol_mode()){
             float distance = plane.rangefinder_state.height_estimate;
             
             if (distance < lidar_note){
