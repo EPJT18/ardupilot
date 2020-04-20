@@ -1868,6 +1868,18 @@ uint8_t QuadPlane::swoop_target_failed() const{
     return pland_fail_type;
 }
 
+uint8_t QuadPlane::swoop_adsb_flags() const{
+    if(plane.avoidance_adsb.current_threat_level()>MAV_COLLISION_THREAT_LEVEL_NONE){
+        return SWOOP_THREAT_DETECTED;
+    }
+    if (plane.avoidance_adsb.get_obstacle_count()>0){
+        return SWOOP_VEHICLE_DETECTED;
+    }
+    return NO_FLAG;
+}
+
+
+
 uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
     switch (flag_type)
     {

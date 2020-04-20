@@ -78,6 +78,8 @@ public:
                       float hspeed,
                       float vspeed);
 
+    int32_t get_obstacle_count();
+
     // update should be called at 10hz or higher
     void update();
 

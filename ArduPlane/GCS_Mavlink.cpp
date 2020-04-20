@@ -381,8 +381,8 @@ void Plane::send_swoop_flags(mavlink_channel_t chan)
             quadplane.swoop_flag_detail(AERODYNAMIC),
             quadplane.swoop_flag_detail(AIRSPEED),
             quadplane.swoop_flag_detail(SERVO),
-            quadplane.swoop_target_failed()  
-
+            quadplane.swoop_target_failed(),
+            quadplane.swoop_adsb_flags()
         );
     
 }

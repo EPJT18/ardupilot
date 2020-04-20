@@ -507,6 +507,9 @@ AP_Avoidance::Obstacle *AP_Avoidance::most_serious_threat()
     return &_obstacles[_current_most_serious_threat];
 }
 
+int32_t AP_Avoidance::get_obstacle_count(){
+    return _obstacle_count;
+}
 
 void AP_Avoidance::update()
 {
