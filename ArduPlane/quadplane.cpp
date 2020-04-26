@@ -1864,12 +1864,14 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
         if (swoop_flag_detail(PLAND_ABORT)>0){
             return NOTE;
         }
+        return NO_FLAG;
     }
 
     case ADSB_FLAG:{
         if (swoop_flag_detail(ADSB_FLAG)>0){
             return NOTE;
         }
+        return NO_FLAG;
     }
 
     }
