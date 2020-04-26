@@ -90,8 +90,7 @@ public:
     uint8_t swoop_flag_level(int flag_type) const;
     uint8_t swoop_max_flag_level() const;
     uint8_t swoop_flag_detail(int flag_type) const;
-    uint8_t swoop_target_failed() const;
-    uint8_t swoop_adsb_flags() const;
+
 
 
 

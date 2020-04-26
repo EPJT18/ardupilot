@@ -365,6 +365,8 @@ void Plane::send_swoop_flags(mavlink_channel_t chan)
             quadplane.swoop_flag_level(AERODYNAMIC),
             quadplane.swoop_flag_level(AIRSPEED),
             quadplane.swoop_flag_level(SERVO),
+            quadplane.swoop_flag_level(PLAND_ABORT),
+            quadplane.swoop_flag_level(ADSB_FLAG),
             quadplane.swoop_flag_detail(HOVER_ASSIST),
             quadplane.swoop_flag_detail(EMERGENCY_LAND),
             quadplane.swoop_flag_detail(GPS_HEALTH),
@@ -381,8 +383,9 @@ void Plane::send_swoop_flags(mavlink_channel_t chan)
             quadplane.swoop_flag_detail(AERODYNAMIC),
             quadplane.swoop_flag_detail(AIRSPEED),
             quadplane.swoop_flag_detail(SERVO),
-            quadplane.swoop_target_failed(),
-            quadplane.swoop_adsb_flags()
+            quadplane.swoop_flag_detail(PLAND_ABORT),
+            quadplane.swoop_flag_detail(ADSB_FLAG)
+
         );
     
 }

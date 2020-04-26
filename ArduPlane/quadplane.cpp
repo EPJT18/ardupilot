@@ -1682,7 +1682,7 @@ bool QuadPlane::swoop_flag(int flag_type) const{
 
 uint8_t QuadPlane::swoop_max_flag_level() const{
     uint8_t returnValue = NO_FLAG ;
-    for(int i=0; i<16; i++){
+    for(int i=0; i<32; i++){
         if (swoop_flag_level(1U<<i) > returnValue){
             returnValue = swoop_flag_level(1U<<i);
         }
@@ -1860,23 +1860,23 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
         return NO_FLAG;
     }
 
+    case PLAND_ABORT:{
+        if (swoop_flag_detail(PLAND_ABORT)>0){
+            return NOTE;
+        }
+    }
+
+    case ADSB_FLAG:{
+        if (swoop_flag_detail(ADSB_FLAG)>0){
+            return NOTE;
+        }
+    }
+
     }
     return NO_FLAG;
     
 }
-uint8_t QuadPlane::swoop_target_failed() const{
-    return pland_fail_type;
-}
 
-uint8_t QuadPlane::swoop_adsb_flags() const{
-    if(plane.avoidance_adsb.current_threat_level()>MAV_COLLISION_THREAT_LEVEL_NONE){
-        return SWOOP_THREAT_DETECTED;
-    }
-    if (plane.avoidance_adsb.get_obstacle_count()>0){
-        return SWOOP_VEHICLE_DETECTED;
-    }
-    return NO_FLAG;
-}
 
 
 
@@ -2016,6 +2016,20 @@ uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
 
     case SERVO:{
         ///to implement
+        return NO_DETAILS_AVAILIABLE;
+    }
+
+    case PLAND_ABORT:{
+        return pland_fail_type;
+    }
+
+    case ADSB_FLAG:{
+        if(plane.avoidance_adsb.current_threat_level()>MAV_COLLISION_THREAT_LEVEL_NONE){
+            return SWOOP_THREAT_DETECTED;
+        }
+        if (plane.avoidance_adsb.get_obstacle_count()>0){
+            return SWOOP_VEHICLE_DETECTED;
+        }
         return NO_DETAILS_AVAILIABLE;
     }
 
