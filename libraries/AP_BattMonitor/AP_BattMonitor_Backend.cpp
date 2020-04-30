@@ -72,7 +72,7 @@ void AP_BattMonitor_Backend::update_resistance_estimate()
 
     // estimate short-term resistance
     float filt_alpha = constrain_float(loop_interval/(loop_interval + _params._resistance_est_tc_1), 0.0f, 0.5f);
-    float resistance_alpha = MIN(1, _params._resistance_est_tc_1*fabsf((_state.current_amps-_current_filt_amps)/_current_max_amps));
+    float resistance_alpha = MIN(1, _params._resistance_est_tc_2*fabsf((_state.current_amps-_current_filt_amps)/_current_max_amps));
     float resistance_estimate = -(_state.voltage-_voltage_filt)/current_delta;
     if (is_positive(resistance_estimate)) {
         _state.resistance = _state.resistance*(1-resistance_alpha) + resistance_estimate*resistance_alpha;
