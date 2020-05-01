@@ -234,13 +234,17 @@ bool AP_Arming::airspeed_checks(bool report)
             // not an airspeed capable vehicle
             return true;
         }
+        bool failureDetected = false;
         for (uint8_t i=0; i<AIRSPEED_MAX_SENSORS; i++) {
             if (airspeed->enabled(i) &&  !airspeed->use(i)) {
                 check_failed(ARMING_CHECK_AIRSPEED, report, "Airspeed %d not healthy", i + 1);
                 arming_check_detail_2 += 1U<<i;
-                return false;
+                failureDetected = true;
+               
             }
         }
+        return failureDetected;
+
     }
 
     return true;
