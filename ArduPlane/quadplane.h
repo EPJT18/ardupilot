@@ -362,6 +362,7 @@ private:
     AP_Int32 language;
     AP_Int32 PODID;
     AP_Int32 ROUTEID;
+    AP_Int32 RPS_ENV;
 
     
 
