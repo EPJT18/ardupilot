@@ -1655,6 +1655,7 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
             }else{
                 // get number of times jump command has already been run
                 int16_t jump_times_run = get_jump_times_run(temp_cmd);
+                _most_recent_jump_times = jump_times_run;
                 if (jump_times_run < temp_cmd.content.jump.num_times) {
                     // update the record of the number of times run
                     if (increment_jump_num_times_if_found) {
@@ -1665,6 +1666,7 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
                 }else{
                     // jump has been run specified number of times so move search to next command in mission
                     cmd_index++;
+                    _most_recent_jump_times = 0;
                 }
             }
         }else{
@@ -1716,6 +1718,7 @@ void AP_Mission::init_jump_tracking()
         _jump_tracking[i].index = AP_MISSION_CMD_INDEX_NONE;
         _jump_tracking[i].num_times_run = 0;
     }
+    _most_recent_jump_times = 0;
 }
 
 /// get_jump_times_run - returns number of times the jump command has been run
