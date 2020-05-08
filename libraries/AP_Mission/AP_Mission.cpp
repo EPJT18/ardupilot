@@ -396,6 +396,14 @@ uint16_t AP_Mission::get_next_nav_cmd_id() {
     return cmd.id;
 }
 
+uint16_t AP_Mission::get_next_nav_cmd_index() {
+    Mission_Command cmd;
+    if (!get_next_nav_cmd(_nav_cmd.index+1, cmd)) {
+        return 0;
+    }
+    return cmd.index;
+}
+
 
 Location AP_Mission::get_next_location(Location defaultLocation){
     Mission_Command cmd;
@@ -1672,6 +1680,7 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
         }else{
             // this is a non-jump command so return it
             cmd = temp_cmd;
+
             return true;
         }
     }

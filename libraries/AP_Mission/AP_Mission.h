@@ -421,6 +421,8 @@ public:
 
     uint16_t get_next_nav_cmd_id();
 
+    uint16_t get_next_nav_cmd_index();
+
     Location get_next_location(Location defaultLocation);
     /// get_current_do_cmd - returns active "do" command
     const Mission_Command& get_current_do_cmd() const { return _do_cmd; }
