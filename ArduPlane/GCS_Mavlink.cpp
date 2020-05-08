@@ -321,7 +321,8 @@ void Plane::send_swoop_status(mavlink_channel_t chan){
         quadplane.swoop_flight_status(), 
         mission.get_current_nav_cmd().id, 
         mission.get_next_nav_cmd_id(),
-        mission.get_first_jump_times_run()
+        mission.get_first_jump_times_run(),
+        mission.get_next_nav_cmd_index()
          );
 }
 

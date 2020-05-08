@@ -396,6 +396,14 @@ uint16_t AP_Mission::get_next_nav_cmd_id() {
     return cmd.id;
 }
 
+uint16_t AP_Mission::get_next_nav_cmd_index() {
+    Mission_Command cmd;
+    if (!get_next_nav_cmd(_nav_cmd.index+1, cmd)) {
+        return 0;
+    }
+    return cmd.index;
+}
+
 
 Location AP_Mission::get_next_location(Location defaultLocation){
     Mission_Command cmd;
@@ -1659,17 +1667,20 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
                     // update the record of the number of times run
                     if (increment_jump_num_times_if_found) {
                         increment_jump_times_run(temp_cmd);
+                        _most_recent_jump_times = jump_times_run+1;
                     }
                     // continue searching from jump target
                     cmd_index = temp_cmd.content.jump.target;
                 }else{
                     // jump has been run specified number of times so move search to next command in mission
                     cmd_index++;
+                    _most_recent_jump_times = 0;
                 }
             }
         }else{
             // this is a non-jump command so return it
             cmd = temp_cmd;
+
             return true;
         }
     }
@@ -1716,6 +1727,7 @@ void AP_Mission::init_jump_tracking()
         _jump_tracking[i].index = AP_MISSION_CMD_INDEX_NONE;
         _jump_tracking[i].num_times_run = 0;
     }
+    _most_recent_jump_times = 0;
 }
 
 /// get_jump_times_run - returns number of times the jump command has been run

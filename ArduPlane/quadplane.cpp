@@ -549,8 +549,9 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("LANGUAGE", 54, QuadPlane, language ,0),
     AP_GROUPINFO("PODID", 55, QuadPlane, PODID,0),
     AP_GROUPINFO("ROUTEID", 56, QuadPlane, ROUTEID , 0),
-
-
+    AP_GROUPINFO("RPS_ENV", 57, QuadPlane, RPS_ENV , 0),
+    AP_GROUPINFO("AUTO_CONT", 58, QuadPlane, RPS_A_CONT , 0),
+    AP_GROUPINFO("AUTO_RTB", 59, QuadPlane, RPS_A_RTB , 0),
 
     AP_GROUPEND
 };
