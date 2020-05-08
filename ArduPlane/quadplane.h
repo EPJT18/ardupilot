@@ -363,7 +363,8 @@ private:
     AP_Int32 PODID;
     AP_Int32 ROUTEID;
     AP_Int32 RPS_ENV;
-
+    AP_Int32 RPS_A_CONT;
+    AP_Int32 RPS_A_RTB;
     
 
     AP_Int8 enable;
