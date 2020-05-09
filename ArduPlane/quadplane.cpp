@@ -1869,9 +1869,16 @@ uint8_t QuadPlane::swoop_flag_level(int flag_type) const{
     }
 
     case ADSB_FLAG:{
-        if (swoop_flag_detail(ADSB_FLAG)>0){
+        if(plane.avoidance_adsb.current_threat_level()==MAV_COLLISION_THREAT_LEVEL_HIGH){
+            return WARNING;
+        }
+        if(plane.avoidance_adsb.current_threat_level()==MAV_COLLISION_THREAT_LEVEL_LOW){
+            return CAUTION;
+        }
+        if (plane.avoidance_adsb.get_obstacle_count()>0){
             return NOTE;
         }
+    
         return NO_FLAG;
     }
 
@@ -2027,8 +2034,11 @@ uint8_t QuadPlane::swoop_flag_detail(int flag_type) const{
     }
 
     case ADSB_FLAG:{
-        if(plane.avoidance_adsb.current_threat_level()>MAV_COLLISION_THREAT_LEVEL_NONE){
-            return SWOOP_THREAT_DETECTED;
+        if(plane.avoidance_adsb.current_threat_level()==MAV_COLLISION_THREAT_LEVEL_HIGH){
+            return SWOOP_F_THREAT_DETECTED;
+        }
+        if(plane.avoidance_adsb.current_threat_level()==MAV_COLLISION_THREAT_LEVEL_LOW){
+            return SWOOP_W_THREAT_DETECTED;
         }
         if (plane.avoidance_adsb.get_obstacle_count()>0){
             return SWOOP_VEHICLE_DETECTED;
