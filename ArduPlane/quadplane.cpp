@@ -1631,7 +1631,7 @@ uint8_t QuadPlane::swoop_flight_status() const{
     if(!hal.util->get_soft_armed()){
         return DISSARMED_ON_GROUND;
     }
-    if(plane.control_mode == &plane.mode_qstabilize && motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE){
+    if(plane.control_mode == &plane.mode_qstabilize && (motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::GROUND_IDLE || motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::SHUT_DOWN )){
         return MOTORS_IDLING;
     }
     if(plane.control_mode == &plane.mode_auto && is_vtol_takeoff(plane.mission.get_current_nav_cmd().id)){
