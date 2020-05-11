@@ -552,6 +552,7 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("RPS_ENV", 57, QuadPlane, RPS_ENV , 0),
     AP_GROUPINFO("AUTO_CONT", 58, QuadPlane, RPS_A_CONT , 0),
     AP_GROUPINFO("AUTO_RTB", 59, QuadPlane, RPS_A_RTB , 0),
+    AP_GROUPINFO("GPS_TIMEOUT", 60, QuadPlane, noGPSTimeout , 60),
 
     AP_GROUPEND
 };
@@ -2338,6 +2339,7 @@ void QuadPlane::update(void)
     
     check_hover_motors_health();
     check_forward_motors_spinning();
+    check_gps_health();
 
     int swoop_status = swoop_flight_status();
 
@@ -3546,6 +3548,27 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
 
     return;
   
+}
+
+void QuadPlane::check_gps_health(void){
+    uint32_t now = AP_HAL::millis();
+    if(plane.gps.swoop_net_health_status()==WARNING){
+        if(noGPSTimer_ms == 0){
+            noGPSTimer_ms = now;
+            gcs().send_text(MAV_SEVERITY_ERROR, "GPS FAILURE! Timer Started");
+        }
+        if ((int32_t)(now - noGPSTimer_ms) > noGPSTimeout*1000){
+            if(plane.control_mode != &plane.mode_qland){
+                plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TRANSITION);
+            
+                gcs().send_text(MAV_SEVERITY_ERROR, "GPS FAILURE! Timed Out, Emergency Landing");
+            }
+            
+        }
+    }
+    else{
+        noGPSTimer_ms = 0;
+    }
 }
 
 void QuadPlane::check_hover_motors_health(void){

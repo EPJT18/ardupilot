@@ -118,6 +118,7 @@ public:
     bool verify_vtol_land(void);
     void check_hover_motors_health(void);
     void check_forward_motors_spinning(void);
+    void check_gps_health(void);
     bool in_vtol_auto(void) const;
     bool in_vtol_mode(void) const;
     void update_throttle_hover();
@@ -386,6 +387,7 @@ private:
     AP_Int32 first_forward_motor_check_time;
     AP_Int32 time_since_last_forward_blh_warning;
     AP_Int8 bl_fwd_throttle_min_percent;
+    AP_Int16 noGPSTimeout;
 
     // control if a VTOL RTL will be used
     AP_Int8 rtl_mode;
@@ -413,6 +415,7 @@ private:
 
     // time we last got an EKF yaw reset
     uint32_t ekfYawReset_ms;
+    int32_t noGPSTimer_ms;
 
     struct {
         AP_Float gain;
