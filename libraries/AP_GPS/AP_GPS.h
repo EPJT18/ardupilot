@@ -220,6 +220,8 @@ public:
         return speed_accuracy(primary_instance, sacc);
     }
 
+    bool primary_is_healthy_F9(void) const;
+
     bool horizontal_accuracy(uint8_t instance, float &hacc) const;
     bool horizontal_accuracy(float &hacc) const {
         return horizontal_accuracy(primary_instance, hacc);

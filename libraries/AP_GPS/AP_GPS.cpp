@@ -385,6 +385,10 @@ uint8_t AP_GPS::num_sensors(void) const
     }
 }
 
+bool AP_GPS::primary_is_healthy_F9(void) const{
+    return state[primary_instance].num_sats >= 16 && strcmp(drivers[primary_instance]->name(), "u-blox") == 0 && drivers[primary_instance]->hardware_generation() == AP_GPS_UBLOX::UBLOX_F9 && (state[primary_instance].status == GPS_OK_FIX_3D || state[primary_instance].status == GPS_OK_FIX_3D_DGPS );
+}
+
 bool AP_GPS::speed_accuracy(uint8_t instance, float &sacc) const
 {
     if (state[instance].have_speed_accuracy) {
