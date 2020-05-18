@@ -2367,6 +2367,17 @@ void QuadPlane::update(void)
         plane.set_mode(plane.mode_loiter, ModeReason::VTOL_FAILED_TRANSITION);
     }
 
+      //Add detection for failed forward motor start during climbout
+    if (forward_motor_failed && swoop_status == TAKEOFF) {
+        gcs().send_text(MAV_SEVERITY_CRITICAL, "Failed to complete takeoff, forward motor failure");
+        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
+            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
+        }
+        else{
+            plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
+        }
+    }
+
     if(swoop_status == ABORTING_TAKEOFF){
         if(!abort_timer_started){
             landing_abort_started = now;
@@ -3367,18 +3378,7 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
         plane.set_mode(plane.mode_qland, ModeReason::VTOL_FAILED_TAKEOFF);
         return false;
     }
-    //Add detection for failed forward motor start during climbout
-    if (forward_motor_failed) {
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "Failed to complete takeoff, forward motor failure");
-        if(plane.home.get_distance(plane.current_loc)>motor_fail_rtl_range){
-            plane.set_mode(plane.mode_qland,ModeReason::VTOL_FAILED_TRANSITION);
-        }
-        else{
-            plane.set_mode(plane.mode_qrtl, ModeReason::VTOL_FAILED_TRANSITION);
-        }
-        return false;
-
-    }
+  
 
     if (plane.current_loc.alt < plane.next_WP_loc.alt && !vtol_takeoff_yaw_wait) {
             return false;
@@ -3917,7 +3917,7 @@ int8_t QuadPlane::forward_throttle_pct(void)
     vel_forward.integrator += fwd_vel_error * deltat * vel_forward.gain * 100;
 
     // inhibit reverse throttle and allow petrol engines with min > 0
-    int8_t fwd_throttle_min = plane.have_reverse_thrust() ? 0 : plane.aparm.throttle_min;
+    int8_t fwd_throttle_min = plane.have_reverse_thrust() ? bl_fwd_throttle_min_percent : plane.aparm.throttle_min;
     vel_forward.integrator = constrain_float(vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_max);
     float outputValue = constrain_float( fwd_vel_error * vel_forward.Pgain * 100 + vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_max);
 
