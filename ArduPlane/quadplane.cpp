@@ -3492,6 +3492,7 @@ void QuadPlane::check_forward_motors_spinning(void){
 if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_percent){
     first_forward_motor_check_time =0;
     forward_motor_failed = false;
+    return;
 }
 
 #ifdef HAVE_AP_BLHELI_SUPPORT
