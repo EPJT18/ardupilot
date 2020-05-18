@@ -3552,7 +3552,7 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
 
 void QuadPlane::check_gps_health(void){
     uint32_t now = AP_HAL::millis();
-    if(plane.gps.swoop_net_health_status()==WARNING){
+    if(plane.gps.swoop_net_health_status()==WARNING && hal.util->get_soft_armed()){
         if(noGPSTimer_ms == 0){
             noGPSTimer_ms = now;
             gcs().send_text(MAV_SEVERITY_ERROR, "GPS FAILURE! Timer Started");
