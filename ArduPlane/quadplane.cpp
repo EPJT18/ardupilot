@@ -1588,7 +1588,14 @@ uint16_t QuadPlane::swoop_forward_endurance(){
     if(plane.airspeed.get_airspeed()> assist_speed ){
         average_forward_power = (average_forward_power*((1000*forward_power_tau) - deltaT)/(1000*forward_power_tau)) + (plane.battery.power(0)*deltaT/(1000*forward_power_tau));
     }
-    return (uint16_t)((plane.battery.wh_remaining(0)/average_forward_power)*3600.0f);
+
+    uint16_t endurance = (uint16_t)((plane.battery.wh_remaining(0)/average_forward_power)*3600.0f);
+
+    AP::logger().Write("ENF", "TimeUS,pow,end", "QfI",
+                                        AP_HAL::micros64(),
+                                        (double)average_forward_power,
+                                        endurance);
+    return endurance;
 }
 
 uint16_t QuadPlane::swoop_hover_endurance(){
@@ -1608,7 +1615,15 @@ uint16_t QuadPlane::swoop_hover_endurance(){
     if(motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED && plane.airspeed.get_airspeed()< assist_speed/2 ){
         average_hover_power = (average_hover_power*((1000*hover_power_tau) - deltaT)/(1000*hover_power_tau)) + (plane.battery.power(1)*deltaT/(1000*hover_power_tau));
     }
-    return (uint16_t)((plane.battery.wh_remaining(1)/average_hover_power)*3600.0f);
+    
+    uint16_t endurance = (uint16_t)((plane.battery.wh_remaining(1)/average_hover_power)*3600.0f);
+
+    AP::logger().Write("ENH", "TimeUS,pow,end", "QfI",
+                                        AP_HAL::micros64(),
+                                        (double)average_forward_power,
+                                        endurance);
+    return endurance;
+
 }
 
 uint8_t QuadPlane::swoop_forward_health() const{
