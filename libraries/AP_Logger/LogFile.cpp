@@ -669,7 +669,7 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     if (!battery.remaining_wh(remaining_wh, battery_instance)) {
         remaining_wh = quiet_nanf();
     }
-    capacity_remaining_percent = battery.capacity_remaining_pct();
+    capacity_remaining_percent = battery.capacity_remaining_pct(battery_instance);
 
 
     const struct log_Current pkt = {
