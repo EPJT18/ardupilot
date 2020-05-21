@@ -648,7 +648,7 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     AP_BattMonitor &battery = AP::battery();
     float temp;
     bool has_temp = battery.get_temperature(temp, battery_instance);
-    bool healthy = battery.healthy();
+    bool healthy = battery.healthy(battery_instance);
     uint8_t capacity_remaining_percent;
     float current, consumed_mah, consumed_wh, consumed_wh_lookup, consumed_mah_lookup, remaining_wh;
     if (!battery.current_amps(current, battery_instance)) {
