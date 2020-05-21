@@ -1679,7 +1679,7 @@ uint8_t AP_GPS::swoop_health_status(uint8_t instance) const{
         if (state[instance].hdop > _sig_degraded_hdop_threshold*100 || state[instance].num_sats < _sig_degraded_sats_threshold){
             returnValue = 2;
         }
-        if (!is_healthy(instance)){
+        if (state[instance].status<2){
             returnValue = 3;
         }
         return returnValue;
