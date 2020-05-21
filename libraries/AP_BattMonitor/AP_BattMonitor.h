@@ -75,6 +75,8 @@ public:
         float       consumed_mah_lookup;       // estimated current draw in mah according to resting voltage lookup
         float       consumed_wh_lookup;        // estimated energy consumed in Wh according to resting voltage lookup
         float       remaining_wh;              // estimated energy remaining in Wh according to current sensor/lookup table
+        float       v_est_sensed;              // estimated voltage by cell lookup table via sensed wh consumed
+        float       v_est_lookup;              // estimated voltage by cell lookup table via estimated wh consume
         uint32_t    last_time_micros;          // time when voltage and current was last read in microseconds
         uint32_t    low_voltage_start_ms;      // time when voltage dropped below the minimum in milliseconds
         uint32_t    critical_voltage_start_ms; // critical voltage failsafe start timer in milliseconds
@@ -130,6 +132,12 @@ public:
 
     /// remaining_lookup - returns energy remaining in watt.hour
     bool remaining_wh(float&remaining_wh, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// voltage_estimate_sensed - returns an estimated resting voltage based on current sensor mah consumed and cell lookup
+    bool voltage_estimate_sensed(float&voltage_estimate_sensed, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
+
+    /// voltage_estimate_lookup - returns an estimated resting voltage based on wh estimated to be consumed based on vrest
+    bool voltage_estimate_lookup(float&voltage_estimate_lookup, const uint8_t instance = AP_BATT_PRIMARY_INSTANCE) const WARN_IF_UNUSED;
 
     /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
     virtual uint8_t capacity_remaining_pct(uint8_t instance) const;

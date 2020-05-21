@@ -81,16 +81,10 @@ bool AP_BattMonitor_Swoop::check_health(void){
     }
 
     // back-calculate estimated resting voltage based on sensed wh and lookup wh
-    float v_est_sensed = lookup_table_from_wh(_initial_cell_state.wh_used + _state.consumed_wh/(_params._series.get()*_params._parallel.get())).voltage;
-    float v_est_lookup = lookup_table_from_wh(_state.consumed_wh_lookup/(_params._series.get()*_params._parallel.get())).voltage;
+    _state.v_est_sensed = lookup_table_from_wh(_initial_cell_state.wh_used + _state.consumed_wh/(_params._series.get()*_params._parallel.get())).voltage;
+    _state.v_est_lookup = lookup_table_from_wh(_state.consumed_wh_lookup/(_params._series.get()*_params._parallel.get())).voltage;
 
-    AP_Logger *logger = AP_Logger::get_singleton();
-    logger->Write("BHLT", "TimeUS,vs, vl", "Qff",
-                                        AP_HAL::micros64(),
-                                        (float)v_est_sensed,
-                                        (float)v_est_lookup);
-
-    if (abs(v_est_sensed - v_est_lookup) < _params._allowable_v_est_deviation.get()){
+    if (abs(_state.v_est_sensed - _state.v_est_lookup) < _params._allowable_v_est_deviation.get()){
         _state.healthy = true;
         return true;
     }

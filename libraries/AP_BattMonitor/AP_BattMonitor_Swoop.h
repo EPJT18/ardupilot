@@ -115,6 +115,9 @@ public:
     // returns true if battery monitor provides individual cell voltages
     bool has_wh_remaining() const override { return true; }
 
+    // returns true if battery monitor provides reverse estimation of cell resting voltage
+    bool has_reverse_voltage_estimate() const override { return true; }
+
     uint8_t capacity_remaining_pct() override;
 
 private:

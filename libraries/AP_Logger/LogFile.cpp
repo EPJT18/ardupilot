@@ -650,7 +650,7 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     bool has_temp = battery.get_temperature(temp, battery_instance);
     bool healthy = battery.healthy(battery_instance);
     uint8_t capacity_remaining_percent;
-    float current, consumed_mah, consumed_wh, consumed_wh_lookup, consumed_mah_lookup, remaining_wh;
+    float current, consumed_mah, consumed_wh, consumed_wh_lookup, consumed_mah_lookup, remaining_wh, v_est_sensed, v_est_lookup;
     if (!battery.current_amps(current, battery_instance)) {
         current = quiet_nanf();
     }
@@ -669,6 +669,12 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
     if (!battery.remaining_wh(remaining_wh, battery_instance)) {
         remaining_wh = quiet_nanf();
     }
+    if (!battery.voltage_estimate_sensed(v_est_sensed, battery_instance)) {
+        v_est_sensed = quiet_nanf();
+    }
+    if (!battery.voltage_estimate_lookup(v_est_lookup, battery_instance)) {
+        v_est_lookup = quiet_nanf();
+    }
     capacity_remaining_percent = battery.capacity_remaining_pct(battery_instance);
 
 
@@ -685,6 +691,8 @@ void AP_Logger::Write_Current_instance(const uint64_t time_us,
         consumed_wh         : consumed_wh,
         consumed_wh_lookup  : consumed_wh_lookup,
         remaining_wh        : remaining_wh,
+        v_est_sensed        : v_est_sensed,
+        v_est_lookup        : v_est_lookup,
         temperature         : (int16_t)(has_temp ? (temp * 100) : 0),
         resistance          : battery.get_resistance(battery_instance)
     };

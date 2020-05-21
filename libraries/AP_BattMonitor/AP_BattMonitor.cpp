@@ -359,6 +359,23 @@ bool AP_BattMonitor::remaining_wh(float &remaining_wh, const uint8_t instance) c
     }
 }
 
+bool AP_BattMonitor::voltage_estimate_sensed(float &voltage_estimate_sensed, const uint8_t instance) const {
+    if (instance < _num_instances && drivers[instance] != nullptr && drivers[instance]->has_reverse_voltage_estimate()) {
+        voltage_estimate_sensed = state[instance].v_est_sensed;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool AP_BattMonitor::voltage_estimate_lookup(float &voltage_estimate_lookup, const uint8_t instance) const {
+    if (instance < _num_instances && drivers[instance] != nullptr && drivers[instance]->has_reverse_voltage_estimate()) {
+        voltage_estimate_lookup = state[instance].v_est_lookup;
+        return true;
+    } else {
+        return false;
+    }
+}
 
 
 /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)

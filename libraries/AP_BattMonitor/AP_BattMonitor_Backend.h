@@ -52,6 +52,9 @@ public:
     // returns true if battery monitor provides individual cell voltages
     virtual bool has_wh_remaining() const { return false; }
 
+    // returns true if battery monitor provides reverse estimation of cell resting voltage
+    virtual bool has_reverse_voltage_estimate() const { return false; }
+
     /// capacity_remaining_pct - returns the % battery capacity remaining (0 ~ 100)
     virtual uint8_t capacity_remaining_pct();
 
