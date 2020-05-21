@@ -553,6 +553,7 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     AP_GROUPINFO("AUTO_CONT", 58, QuadPlane, RPS_A_CONT , 0),
     AP_GROUPINFO("AUTO_RTB", 59, QuadPlane, RPS_A_RTB , 0),
     AP_GROUPINFO("GPS_TIMEOUT", 60, QuadPlane, noGPSTimeout , 60),
+    AP_GROUPINFO("BL_F_FAIL_T", 61, QuadPlane, bl_f_fail_time , 2000),
 
     AP_GROUPEND
 };
@@ -3519,6 +3520,11 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
     forward_motor_detail = 0;
     int forward_motor_count = -1;
 
+    if(now-last_forward_motor_check_time>2000){
+        first_forward_motor_check_time = now;     
+    }
+    last_forward_motor_check_time =now;
+
     if(now-first_forward_motor_check_time<bl_startup_time){
         for (uint8_t i=0; i<AP_BLHELI_MAX_ESCS; i++) {
             if ((((uint8_t)bl_fwd_motor_mask) & (1U<<i))) {
@@ -3545,7 +3551,7 @@ if(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)<bl_fwd_throttle_min_
         else if(!blheli->get_telem_data(i, td) || td.rpm<bl_lowest_rpm || now - td.timestamp_ms > 1000){
            
             forward_motor_count++;    
-            if(now-bl_last_spinning_packet[i]>bl_fail_time ||now - td.timestamp_ms > bl_fail_time){
+            if(now-bl_last_spinning_packet[i]>bl_f_fail_time ||now - td.timestamp_ms > bl_f_fail_time){
                
                 if (now-time_since_last_forward_blh_warning>4000){
                     gcs().send_text(MAV_SEVERITY_ERROR, "Forward Motor %d not running!", i+1);
