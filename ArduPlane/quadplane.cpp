@@ -1426,7 +1426,7 @@ float QuadPlane::get_desired_yaw_rate_cds(void)
         // use bank angle to get desired yaw rate
         yaw_cds += desired_auto_yaw_rate_cds();
     }
-    if (plane.get_throttle_input() <= 0 && !plane.auto_throttle_mode) {
+    if (plane.get_throttle_input() <= 0 && !(plane.auto_throttle_mode || plane.control_mode == &plane.mode_qland)) {
         // the user may be trying to disarm
         return 0;
     }
@@ -3251,7 +3251,7 @@ void QuadPlane::control_qrtl(void)
     vtol_position_controller();
     if (poscontrol.state >= QPOS_POSITION2) {
         // change target altitude to home alt
-        plane.next_WP_loc.alt = plane.home.alt;
+        plane.next_WP_loc.alt = plane.home.alt-7;
         verify_vtol_land();
     }
 }
