@@ -1592,12 +1592,12 @@ uint16_t QuadPlane::swoop_forward_endurance(){
 
     uint16_t endurance = (uint16_t)((plane.battery.wh_remaining(0)/average_forward_power)*3600.0f);
 
-    AP::logger().Write("ENF", "TimeUS,pow,end,pct,wh", "QfIff",
+    AP::logger().Write("ENF", "TimeUS,pow,end,pct,wh", "QfIIf",
                                         AP_HAL::micros64(),
                                         (double)average_forward_power,
                                         endurance,
                                         plane.battery.capacity_remaining_pct(0),
-                                        plane.battery.wh_remaining(0));
+                                        (double)plane.battery.wh_remaining(0));
     return endurance;
 }
 
@@ -1621,12 +1621,12 @@ uint16_t QuadPlane::swoop_hover_endurance(){
     
     uint16_t endurance = (uint16_t)((plane.battery.wh_remaining(1)/average_hover_power)*3600.0f);
 
-    AP::logger().Write("ENH", "TimeUS,pow,end,pct,wh", "QfIff",
+    AP::logger().Write("ENH", "TimeUS,pow,end,pct,wh", "QfIIf",
                                         AP_HAL::micros64(),
                                         (double)average_hover_power,
                                         endurance,
                                         plane.battery.capacity_remaining_pct(1),
-                                        plane.battery.wh_remaining(1));
+                                        (double)plane.battery.wh_remaining(1));
     return endurance;
 
 }
