@@ -839,12 +839,15 @@ void AP_GPS::update(void)
                     }
 
                     bool should_switch = false;
-                    
+                    /*
                     if( state[i].time_week == state[primary_instance].time_week){
-                        if( state[i].time_week_ms - state[primary_instance].time_week_ms > 400){
+                        if( (state[i].time_week_ms - state[primary_instance].time_week_ms) > 400){
+                            int32_t time = (state[i].time_week_ms - state[primary_instance].time_week_ms);
+                             gcs().send_text(MAV_SEVERITY_CRITICAL, "GPS Switch: Time diff %u", time);
                             should_switch = true;
                         }
                     }
+                    */
 
                     if (status_i > status_primary) {
                         should_switch = true;
