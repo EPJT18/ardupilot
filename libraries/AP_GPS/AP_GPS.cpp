@@ -839,6 +839,12 @@ void AP_GPS::update(void)
                     }
 
                     bool should_switch = false;
+                    
+                    if( state[i].time_week == state[primary_instance].time_week){
+                        if( state[i].time_week_ms - state[primary_instance].time_week_ms > 400){
+                            should_switch = true;
+                        }
+                    }
 
                     if (status_i > status_primary) {
                         should_switch = true;
